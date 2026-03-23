@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ENCRYPT CMP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #f5f2ff, #ece8ff);
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(18px);
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    }
+
+    @keyframes fadeUp {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    body.modal-open { overflow: hidden; }
+
+    .lang-switch-container {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      z-index: 99999;
+      max-width: 320px;
+      justify-content: flex-end;
+    }
+    .lang-btn {
+      padding: 6px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(90,66,149,0.15);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 2px 8px rgba(90,66,149,0.12);
+      color: #5a4295;
+      transition: all 0.18s;
+      font-family: inherit;
+    }
+    .lang-btn:hover { background: rgba(232,222,252,0.9); }
+    .lang-btn.active { background: #5a4295; color: white; border-color: #5a4295; box-shadow: 0 4px 14px rgba(90,66,149,0.3); }
+
+    #regionSim {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 13px;
+      background: white;
+      z-index: 99999;
+    }
+
+    .cmp-banner {
+      position: fixed;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 540px;
+      padding: 28px;
+      display: none;
+      animation: fadeUp 0.5s ease forwards;
+      z-index: 9999;
+    }
+    .cmp-title { font-size: 24px; font-weight: 600; color: #5a4295; margin-bottom: 10px; }
+    .cmp-text { font-size: 15px; color: #444; margin-bottom: 22px; }
+    .cmp-buttons { display: flex; gap: 14px; flex-wrap: wrap; }
+    .cmp-btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 16px;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .btn-primary { background: #7bc4ad; color: white; }
+    .btn-secondary { background: #f3f3f3; color: #444; }
+    .btn-outline { background: #fce7f3; color: #d63384; }
+    .btn-danger { background: #ffe5e5; color: #b30000; }
+
+    .cmp-modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.45);
+      display: none; justify-content: center; align-items: center;
+      z-index: 10000; padding: 20px; overflow: auto;
+    }
+    .cmp-modal-content {
+      width: 100%;
+      max-width: 620px;
+      padding: 30px;
+      animation: fadeUp 0.4s ease;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-title { font-size: 24px; font-weight: 600; color: #5a4295; margin-bottom: 20px; }
+
+    .purpose-card {
+      padding: 20px;
+      border-radius: 20px;
+      margin-bottom: 18px;
+      border: 1px solid rgba(90,66,149,0.12);
+    }
+    .purpose-header { display: flex; justify-content: space-between; align-items: center; }
+    .purpose-name { font-size: 17px; font-weight: 600; color: #333; }
+    .purpose-desc { margin-top: 10px; font-size: 14px; color: #666; line-height: 1.5; }
+
+    .toggle { position: relative; width: 56px; height: 30px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc; border-radius: 30px; transition: 0.3s;
+    }
+    .slider:before {
+      content: "";
+      position: absolute;
+      height: 24px; width: 24px;
+      left: 3px; bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+    input:checked + .slider { background: #7bc4ad; }
+    input:checked + .slider:before { transform: translateX(26px); }
+
+    .modal-actions {
+      margin-top: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .toast {
+      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+      background: #5a4295; color: white; padding: 12px 20px;
+      border-radius: 14px; font-size: 14px; display: none; z-index: 10001;
+    }
+
+    .settings-btn {
+      position: fixed;
+      right: 20px;
+      bottom: 80px;
+      padding: 12px 16px;
+      border-radius: 22px;
+      border: none;
+      background: #5a4295;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      display: none;
+      z-index: 9999;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Language switch -->
+  <div class="lang-switch-container">
+    <button class="lang-btn" id="btnEnglish">English</button>
+    <button class="lang-btn" id="btnHindi">हिन्दी</button>
+    <button class="lang-btn" id="btnTelugu">తెలుగు</button>
+    <button class="lang-btn" id="btnTamil">தமிழ்</button>
+    <button class="lang-btn" id="btnKannada">ಕನ್ನಡ</button>
+  </div>
+
+  <!-- Region simulator -->
+  <select id="regionSim">
+    <option value="">🌍 Auto Detect</option>
+    <option value="IN">🇮🇳 Simulate India (DPDP)</option>
+    <option value="FR">🇪🇺 Simulate EU (GDPR)</option>
+  </select>
+
+
+
+  <!-- CMP banner -->
+  <div class="cmp-banner glass" id="cmpBanner">
+    <div id="regionBadge"
+      style="font-size:12px;font-weight:600;color:#5a4295;background:#e8defc;
+             padding:6px 12px;border-radius:14px;display:inline-block;margin-bottom:12px;">
+    </div>
+    <div class="cmp-title" id="bannerTitle"></div>
+    <div class="cmp-text" id="bannerText"></div>
+    <div id="dpdpNote" style="display:none; font-size:12px; margin-top:6px; opacity:0.8;">
+      Under India's DPDP Act, consent must be explicit and time‑bound. REJECT ALL disabled.
+    </div>
+    <div class="cmp-buttons">
+      <button class="cmp-btn btn-secondary" id="btnReject"></button>
+      <button class="cmp-btn btn-outline" id="btnCustomize"></button>
+      <button class="cmp-btn btn-primary" id="btnAccept"></button>
+    </div>
+  </div>
+
+  <!-- =====================================================
+       CMP MAIN MODAL
+       ===================================================== -->
+  <div class="cmp-modal" id="cmpModal">
+    <div class="cmp-modal-content glass">
+      <div class="modal-title" id="modalTitle"></div>
+
+      <!-- Purpose cards -->
+      <div class="purpose-card glass">
+        <div class="purpose-header">
+          <div class="purpose-name" id="pNecessary"></div>
+          <label class="toggle">
+            <input type="checkbox" checked disabled />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="purpose-desc" id="dNecessary"></div>
+      </div>
+
+      <div class="purpose-card glass">
+        <div class="purpose-header">
+          <div class="purpose-name" id="pAnalytics"></div>
+          <label class="toggle">
+            <input type="checkbox" id="analytics" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="purpose-desc" id="dAnalytics"></div>
+      </div>
+
+      <div class="purpose-card glass">
+        <div class="purpose-header">
+          <div class="purpose-name" id="pMarketing"></div>
+          <label class="toggle">
+            <input type="checkbox" id="marketing" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="purpose-desc" id="dMarketing"></div>
+      </div>
+
+      <div class="purpose-card glass">
+        <div class="purpose-header">
+          <div class="purpose-name" id="pPersonalization"></div>
+          <label class="toggle">
+            <input type="checkbox" id="personalization" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="purpose-desc" id="dPersonalization"></div>
+      </div>
+
+      <div class="purpose-card glass">
+        <div class="purpose-header">
+          <div class="purpose-name" id="pThird"></div>
+          <label class="toggle">
+            <input type="checkbox" id="third_party_sharing" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="purpose-desc" id="dThird"></div>
+      </div>
+
+      <!-- Rights info -->
+      <div id="rightsInlineNote" style="margin-top:20px; font-size:13px; opacity:0.8;">
+        <strong>Your Rights:</strong><br>
+        In case of a privacy incident, you will be notified as per
+        <span style="color:#5a4295;">DPDP Act</span> and
+        <span style="color:#5a4295;">GDPR</span> rules.
+        You may request a copy of your consent receipt at any time.
+      </div>
+
+      <!-- Expandable rights section -->
+      <div id="rightsSection" style="display:none; margin-top:20px;">
+        <div class="glass" style="padding:28px; border-radius:20px; box-shadow:0 6px 24px rgba(0,0,0,0.1);">
+          <h2 id="rightsPanelTitle" style="color:#5a4295; font-size:22px; margin-bottom:18px;">🛡️ Your Data Rights</h2>
+          <div style="font-size:14px; color:#444; line-height:1.7;">
+            <p id="rightsPanelIntro">You have the right to control how your personal data is used. Under <strong>DPDP</strong> and <strong>GDPR</strong>, you can:</p>
+            <ul style="margin-top:12px; padding-left:18px;">
+              <li id="rightsItemAccess"><strong>📄 Access:</strong> Request a copy of your personal data.</li>
+              <li id="rightsItemRectification"><strong>✏️ Rectification:</strong> Correct inaccurate or incomplete data.</li>
+              <li id="rightsItemErasure"><strong>🗑️ Erasure:</strong> Request deletion of your data.</li>
+              <li id="rightsItemRestriction"><strong>⛔ Restriction:</strong> Limit how your data is used.</li>
+              <li id="rightsItemObjection"><strong>🚫 Objection:</strong> Opt out of marketing or profiling.</li>
+              <li id="rightsItemPortability"><strong>🔄 Portability:</strong> Export your data in a readable format.</li>
+              <li id="rightsItemWithdraw"><strong>🔓 Withdraw Consent:</strong> Change your preferences anytime.</li>
+            </ul>
+            <p id="rightsItemContact" style="margin-top:16px; font-size:13px; opacity:0.8;">
+              To exercise any of these rights, contact our Data Protection Officer or use the consent dashboard.
+            </p>
+          </div>
+          <div style="margin-top:24px; display:flex; justify-content:flex-end;">
+            <button id="rightsCloseBtn" onclick="document.getElementById('rightsSection').style.display='none'"
+              class="cmp-btn btn-secondary" style="max-width:120px;">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Consent controls card -->
+      <div class="glass" style="padding:20px;border-radius:20px;margin-top:14px;margin-bottom:20px;">
+
+        <!-- Risk meter -->
+        <div id="riskMeter" style="margin-top: 12px; display: none;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span id="riskTitle" style="font-weight:600;">Privacy Risk</span>
+            <span id="riskScore" style="font-size:12px; opacity:0.8;">0/100</span>
+          </div>
+          <div style="margin-top:4px; width:100%; height:8px; background:#e5e7eb; border-radius:999px; overflow:hidden;">
+            <div id="riskBar" style="height:8px; width:30%; background:#22c55e;"></div>
+          </div>
+          <div id="riskLabel" style="margin-top:4px; font-size:12px; opacity:0.9;">Low Risk</div>
+          <div style="margin-top:8px;">
+            <div id="riskKeyFactorsLabel" style="font-size:12px; font-weight:600; margin-bottom:4px;">Key factors:</div>
+            <ul id="riskFactors" style="margin:0; padding-left:18px; font-size:12px;"></ul>
+          </div>
+          <div style="margin-top:8px; font-size:12px; font-style:italic; color:#4b5563;" id="riskRecommendation">
+            Current settings use only minimal data.
+          </div>
+        </div>
+
+        <div style="margin-top:12px; text-align:right;">
+          <button id="viewVendorsBtn" style="
+            background:none; border:none; color:#5a4295;
+            font-size:13px; cursor:pointer; text-decoration:underline;">
+            View vendors &amp; data sharing →
+          </button>
+        </div>
+
+        <div style="margin-top:20px; text-align:right;">
+          <button id="viewRightsBtn" style="
+            background:none; border:none; color:#5a4295;
+            font-size:13px; cursor:pointer; text-decoration:underline;">
+            View Your Rights →
+          </button>
+        </div>
+
+        <!-- Consent duration -->
+        <div style="font-size:16px;font-weight:600;color:#5a4295;margin-bottom:8px;margin-top:16px;" id="consentDurationLabel">Consent duration</div>
+        <select id="consentDuration" style="width:100%;padding:12px;border-radius:14px;border:1px solid #ccc;font-size:15px;">
+          <option value="24h">24 hours</option>
+          <option value="30d" selected>1 month</option>
+          <option value="365d">1 year</option>
+        </select>
+
+        <!-- Opt-out + restore -->
+        <div style="display:flex;gap:12px;margin-top:20px;">
+          <button class="cmp-btn btn-danger" id="btnOptOutAll"></button>
+          <button class="cmp-btn btn-secondary" id="btnRestore"></button>
+        </div>
+      </div>
+
+      <!-- Save button -->
+      <div class="modal-actions">
+        <button class="cmp-btn btn-primary" id="btnSave"></button>
+      </div>
+
+    </div><!-- /.cmp-modal-content -->
+  </div><!-- /#cmpModal -->
+
+  <!-- =====================================================
+       VENDOR MODAL — moved OUTSIDE cmpModal (BUG FIX #1)
+       ===================================================== -->
+  <div class="cmp-modal" id="vendorModal">
+    <div class="cmp-modal-content glass">
+      <div class="modal-title" id="vendorModalTitle">Vendors and Data Sharing</div>
+      <div id="vendorList" style="font-size:14px; color:#444; line-height:1.5;"></div>
+      <div style="margin-top:20px;">
+        <button class="cmp-btn btn-secondary" id="closeVendorModal" style="max-width:120px;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast + Privacy button -->
+  <div class="toast" id="toast"></div>
+  <button class="settings-btn" id="settingsBtn">⚙️ Privacy Settings</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    /* ---------------- LANGUAGE TEXT ---------------- */
+    const translations = {
+      en: {
+        bannerTitle: "🔒 Encrypt CMP",
+        bannerText: "We use cookies and similar technologies for essential functionality, analytics, marketing, personalization, and third‑party services.",
+        btnReject: "I Disagree",
+        btnCustomize: "Customize",
+        btnAccept: "Accept All",
+        modalTitle: "Privacy Preferences",
+        btnOptOutAll: "Opt‑Out All Non‑Essential",
+        btnRestore: "Restore Recommended",
+        btnSave: "Save Preferences",
+        settingsBtn: "⚙️ Privacy Settings",
+        toastSaved: "Preferences saved",
+        // banner region badge
+        regionBadgeGDPR: "Detected region: EU (GDPR)",
+        regionBadgeDPDP: "Detected region: India (DPDP)",
+        dpdpNote: "Under India's DPDP Act, consent must be explicit and time‑bound. REJECT ALL disabled.",
+        // rights inline note
+        rightsNote: "Your Rights:",
+        rightsNoteBody: "In case of a privacy incident, you will be notified as per",
+        rightsNoteBody2: "rules. You may request a copy of your consent receipt at any time.",
+        // rights panel
+        rightsTitle: "🛡️ Your Data Rights",
+        rightsIntro: "You have the right to control how your personal data is used. Under DPDP and GDPR, you can:",
+        rightsAccess: "Access: Request a copy of your personal data.",
+        rightsRectification: "Rectification: Correct inaccurate or incomplete data.",
+        rightsErasure: "Erasure: Request deletion of your data.",
+        rightsRestriction: "Restriction: Limit how your data is used.",
+        rightsObjection: "Objection: Opt out of marketing or profiling.",
+        rightsPortability: "Portability: Export your data in a readable format.",
+        rightsWithdraw: "Withdraw Consent: Change your preferences anytime.",
+        rightsContact: "To exercise any of these rights, contact our Data Protection Officer or use the consent dashboard.",
+        rightsClose: "Close",
+        // risk meter
+        riskTitle: "Privacy Risk",
+        riskLow: "Low Risk",
+        riskMedium: "Medium Risk",
+        riskHigh: "High Risk",
+        riskKeyFactors: "Key factors:",
+        riskOnlyNecessary: "Only strictly necessary processing is active.",
+        riskDefaultRec: "Current settings use only minimal data.",
+        // risk factors
+        riskFactorAnalytics: "Analytics enabled: behavioral tracking active",
+        riskFactorMarketing: "Marketing enabled: profiling and targeted ads",
+        riskFactorPersonalization: "Personalization enabled: preference-based profiling",
+        riskFactorThirdParty: "Third‑party sharing enabled: external vendors receive data",
+        // risk recommendations
+        riskRecHighDPDPThird: "High risk under DPDP: consider disabling Third‑party Sharing or reducing data shared with external vendors.",
+        riskRecHighGDPRThird: "High risk under GDPR: consider disabling Third‑party Sharing to reduce cross‑border and external vendor risk.",
+        riskRecHighMarketing: "High profiling risk from Marketing: you may want to disable marketing cookies for stricter privacy.",
+        riskRecMedium: "Medium risk: limiting Marketing or Personalization will further reduce your tracking profile.",
+        riskRecLowDPDP: "Low risk: current settings align with minimal data collection under DPDP.",
+        riskRecLowGDPR: "Low risk: current settings use only limited data under GDPR.",
+        // vendor modal
+        vendorModalTitle: "Vendors and Data Sharing",
+        vendorPurposeLabel: "Purpose:",
+        vendorDataLabel: "Data shared:",
+        vendorNotSpecified: "Not specified",
+        vendorNone: "No external vendors are currently used.",
+        vendorError: "Unable to load vendor data.",
+        vendorClose: "Close",
+        viewVendorsBtn: "View vendors & data sharing →",
+        viewRightsBtn: "View Your Rights →",
+        // consent duration
+        consentDurationLabel: "Consent duration",
+        duration24h: "24 hours",
+        duration30d: "1 month",
+        duration365d: "1 year",
+      },
+      hi: {
+        bannerTitle: "🔒 ENCRYPT CMP",
+        bannerText: "हम आवश्यक कार्यक्षमता, विश्लेषण, मार्केटिंग, निजीकरण और तृतीय‑पक्ष सेवाओं के लिए कुकीज़ और समान तकनीकों का उपयोग करते हैं।",
+        btnReject: "मैं असहमत हूँ",
+        btnCustomize: "कस्टमाइज़ करें",
+        btnAccept: "सभी स्वीकार करें",
+        modalTitle: "गोपनीयता प्राथमिकताएँ",
+        btnOptOutAll: "सभी गैर‑आवश्यक बंद करें",
+        btnRestore: "अनुशंसित सेटिंग्स पुनर्स्थापित करें",
+        btnSave: "प्राथमिकताएँ सहेजें",
+        settingsBtn: "⚙️ गोपनीयता सेटिंग्स",
+        toastSaved: "प्राथमिकताएँ सहेजी गईं",
+        // banner region badge
+        regionBadgeGDPR: "पता लगाया गया क्षेत्र: यूरोपीय संघ (GDPR)",
+        regionBadgeDPDP: "पता लगाया गया क्षेत्र: भारत (DPDP)",
+        dpdpNote: "भारत के DPDP अधिनियम के तहत, सहमति स्पष्ट और समय-सीमित होनी चाहिए। 'सभी अस्वीकार करें' अक्षम है।",
+        // rights inline note
+        rightsNote: "आपके अधिकार:",
+        rightsNoteBody: "गोपनीयता घटना की स्थिति में, आपको",
+        rightsNoteBody2: "नियमों के अनुसार सूचित किया जाएगा। आप किसी भी समय अपनी सहमति रसीद की प्रति मांग सकते हैं।",
+        // rights panel
+        rightsTitle: "🛡️ आपके डेटा अधिकार",
+        rightsIntro: "आपको यह नियंत्रित करने का अधिकार है कि आपका व्यक्तिगत डेटा कैसे उपयोग किया जाता है। DPDP और GDPR के तहत, आप यह कर सकते हैं:",
+        rightsAccess: "📄 पहुँच: अपने व्यक्तिगत डेटा की प्रति मांगें।",
+        rightsRectification: "✏️ सुधार: गलत या अधूरे डेटा को ठीक करें।",
+        rightsErasure: "🗑️ मिटाना: अपना डेटा हटाने का अनुरोध करें।",
+        rightsRestriction: "⛔ प्रतिबंध: अपने डेटा के उपयोग को सीमित करें।",
+        rightsObjection: "🚫 आपत्ति: मार्केटिंग या प्रोफाइलिंग से बाहर निकलें।",
+        rightsPortability: "🔄 पोर्टेबिलिटी: अपना डेटा पठनीय प्रारूप में निर्यात करें।",
+        rightsWithdraw: "🔓 सहमति वापस लें: कभी भी अपनी प्राथमिकताएँ बदलें।",
+        rightsContact: "इनमें से किसी भी अधिकार का उपयोग करने के लिए, हमारे डेटा सुरक्षा अधिकारी से संपर्क करें या सहमति डैशबोर्ड का उपयोग करें।",
+        rightsClose: "बंद करें",
+        // risk meter
+        riskTitle: "गोपनीयता जोखिम",
+        riskLow: "कम जोखिम",
+        riskMedium: "मध्यम जोखिम",
+        riskHigh: "उच्च जोखिम",
+        riskKeyFactors: "मुख्य कारक:",
+        riskOnlyNecessary: "केवल आवश्यक प्रक्रियाएँ सक्रिय हैं।",
+        riskDefaultRec: "वर्तमान सेटिंग्स न्यूनतम डेटा का उपयोग करती हैं।",
+        // risk factors
+        riskFactorAnalytics: "विश्लेषण सक्षम: व्यवहार ट्रैकिंग सक्रिय",
+        riskFactorMarketing: "मार्केटिंग सक्षम: प्रोफाइलिंग और लक्षित विज्ञापन",
+        riskFactorPersonalization: "निजीकरण सक्षम: प्राथमिकता-आधारित प्रोफाइलिंग",
+        riskFactorThirdParty: "तृतीय‑पक्ष साझाकरण सक्षम: बाहरी विक्रेताओं को डेटा प्राप्त होता है",
+        // risk recommendations
+        riskRecHighDPDPThird: "DPDP के तहत उच्च जोखिम: तृतीय‑पक्ष साझाकरण अक्षम करने पर विचार करें।",
+        riskRecHighGDPRThird: "GDPR के तहत उच्च जोखिम: तृतीय‑पक्ष साझाकरण अक्षम करने पर विचार करें।",
+        riskRecHighMarketing: "मार्केटिंग से उच्च प्रोफाइलिंग जोखिम: सख्त गोपनीयता के लिए मार्केटिंग कुकीज़ अक्षम करें।",
+        riskRecMedium: "मध्यम जोखिम: मार्केटिंग या निजीकरण सीमित करने से ट्रैकिंग और कम होगी।",
+        riskRecLowDPDP: "कम जोखिम: वर्तमान सेटिंग्स DPDP के तहत न्यूनतम डेटा संग्रह के अनुरूप हैं।",
+        riskRecLowGDPR: "कम जोखिम: वर्तमान सेटिंग्स GDPR के तहत सीमित डेटा का उपयोग करती हैं।",
+        // vendor modal
+        vendorModalTitle: "विक्रेता और डेटा साझाकरण",
+        vendorPurposeLabel: "उद्देश्य:",
+        vendorDataLabel: "साझा किया गया डेटा:",
+        vendorNotSpecified: "निर्दिष्ट नहीं",
+        vendorNone: "वर्तमान में कोई बाहरी विक्रेता उपयोग नहीं किया जा रहा।",
+        vendorError: "विक्रेता डेटा लोड करने में असमर्थ।",
+        vendorClose: "बंद करें",
+        viewVendorsBtn: "विक्रेता और डेटा साझाकरण देखें →",
+        viewRightsBtn: "अपने अधिकार देखें →",
+        // consent duration
+        consentDurationLabel: "सहमति अवधि",
+        duration24h: "24 घंटे",
+        duration30d: "1 महीना",
+        duration365d: "1 वर्ष",
+      },
+
+      te: {
+        bannerTitle: "🔒 ENCRYPT CMP",
+        bannerText: "మేము ముఖ్యమైన కార్యాచరణ, విశ్లేషణలు, మార్కెటింగ్, వ్యక్తిగతీకరణ మరియు మూడవ పక్ష సేవల కోసం కుకీలు మరియు సమాన సాంకేతికతలను ఉపయోగిస్తాము.",
+        btnReject: "నేను అంగీకరించను",
+        btnCustomize: "అనుకూలీకరించు",
+        btnAccept: "అన్నీ అంగీకరించు",
+        modalTitle: "గోప్యతా ప్రాధాన్యతలు",
+        btnOptOutAll: "అన్ని అనవసర వాటిని నిలిపివేయండి",
+        btnRestore: "సిఫార్సు చేసిన సెట్టింగ్‌లను పునరుద్ధరించండి",
+        btnSave: "ప్రాధాన్యతలు సేవ్ చేయండి",
+        settingsBtn: "⚙️ గోప్యతా సెట్టింగ్‌లు",
+        toastSaved: "ప్రాధాన్యతలు సేవ్ చేయబడ్డాయి",
+        regionBadgeGDPR: "గుర్తించిన ప్రాంతం: EU (GDPR)",
+        regionBadgeDPDP: "గుర్తించిన ప్రాంతం: భారతదేశం (DPDP)",
+        dpdpNote: "భారతదేశపు DPDP చట్టం ప్రకారం, సమ్మతి స్పష్టంగా మరియు సమయ-పరిమితంగా ఉండాలి.",
+        rightsNote: "మీ హక్కులు:",
+        rightsNoteBody: "గోప్యతా సంఘటన విషయంలో, మీకు",
+        rightsNoteBody2: "నిబంధనల ప్రకారం తెలియజేయబడుతుంది.",
+        rightsTitle: "🛡️ మీ డేటా హక్కులు",
+        rightsIntro: "DPDP మరియు GDPR కింద మీ వ్యక్తిగత డేటా ఎలా ఉపయోగించబడుతుందో నియంత్రించే హక్కు మీకు ఉంది:",
+        rightsAccess: "📄 యాక్సెస్: మీ వ్యక్తిగత డేటా కాపీని అభ్యర్థించండి.",
+        rightsRectification: "✏️ సవరణ: తప్పుడు డేటాను సరిదిద్దండి.",
+        rightsErasure: "🗑️ తొలగింపు: మీ డేటాను తొలగించమని అభ్యర్థించండి.",
+        rightsRestriction: "⛔ నిషేధం: మీ డేటా వినియోగాన్ని పరిమితం చేయండి.",
+        rightsObjection: "🚫 అభ్యంతరం: మార్కెటింగ్ నుండి నిష్క్రమించండి.",
+        rightsPortability: "🔄 పోర్టబిలిటీ: మీ డేటాను ఎగుమతి చేయండి.",
+        rightsWithdraw: "🔓 సమ్మతి వెనక్కి తీసుకోండి: ఎప్పుడైనా మీ ప్రాధాన్యతలు మార్చండి.",
+        rightsContact: "ఈ హక్కులను వినియోగించుకోవడానికి మా డేటా రక్షణ అధికారిని సంప్రదించండి.",
+        rightsClose: "మూసివేయి",
+        riskTitle: "గోప్యతా ప్రమాదం",
+        riskLow: "తక్కువ ప్రమాదం", riskMedium: "మధ్యమ ప్రమాదం", riskHigh: "అధిక ప్రమాదం",
+        riskKeyFactors: "ముఖ్య అంశాలు:",
+        riskOnlyNecessary: "కేవలం అవసరమైన ప్రక్రియలు మాత్రమే సక్రియంగా ఉన్నాయి.",
+        riskDefaultRec: "ప్రస్తుత సెట్టింగ్‌లు కనీస డేటాను ఉపయోగిస్తున్నాయి.",
+        riskFactorAnalytics: "విశ్లేషణలు సక్రియం: ప్రవర్తన ట్రాకింగ్",
+        riskFactorMarketing: "మార్కెటింగ్ సక్రియం: ప్రొఫైలింగ్ మరియు లక్ష్య ప్రకటనలు",
+        riskFactorPersonalization: "వ్యక్తిగతీకరణ సక్రియం: ప్రాధాన్యత ఆధారిత ప్రొఫైలింగ్",
+        riskFactorThirdParty: "మూడవ పక్ష భాగస్వామ్యం: బాహ్య విక్రేతలకు డేటా",
+        riskRecHighDPDPThird: "DPDP కింద అధిక ప్రమాదం: మూడవ పక్ష భాగస్వామ్యాన్ని నిలిపివేయండి.",
+        riskRecHighGDPRThird: "GDPR కింద అధిక ప్రమాదం: మూడవ పక్ష భాగస్వామ్యాన్ని నిలిపివేయండి.",
+        riskRecHighMarketing: "మార్కెటింగ్ నుండి అధిక ప్రమాదం: మార్కెటింగ్ కుకీలను నిలిపివేయండి.",
+        riskRecMedium: "మధ్యమ ప్రమాదం: మార్కెటింగ్ లేదా వ్యక్తిగతీకరణ పరిమితం చేయండి.",
+        riskRecLowDPDP: "తక్కువ ప్రమాదం: ప్రస్తుత సెట్టింగ్‌లు DPDP కింద కనీస డేటాతో సంరేఖించబడ్డాయి.",
+        riskRecLowGDPR: "తక్కువ ప్రమాదం: ప్రస్తుత సెట్టింగ్‌లు GDPR కింద పరిమిత డేటాను ఉపయోగిస్తున్నాయి.",
+        vendorModalTitle: "విక్రేతలు మరియు డేటా భాగస్వామ్యం",
+        vendorPurposeLabel: "ఉద్దేశం:", vendorDataLabel: "భాగస్వామ్యం చేసిన డేటా:",
+        vendorNotSpecified: "పేర్కొనలేదు", vendorNone: "ప్రస్తుతం బాహ్య విక్రేతులు ఎవరూ లేరు.",
+        vendorError: "విక్రేత డేటా లోడ్ చేయడం సాధ్యం కాలేదు.", vendorClose: "మూసివేయి",
+        viewVendorsBtn: "విక్రేతలు & డేటా భాగస్వామ్యం చూడండి →",
+        viewRightsBtn: "మీ హక్కులు చూడండి →",
+        consentDurationLabel: "సమ్మతి వ్యవధి",
+        duration24h: "24 గంటలు", duration30d: "1 నెల", duration365d: "1 సంవత్సరం",
+      },
+      ta: {
+        bannerTitle: "🔒 ENCRYPT CMP",
+        bannerText: "அத்தியாவசிய செயல்பாடு, பகுப்பாய்வு, சந்தைப்படுத்தல், தனிப்பயனாக்கம் மற்றும் மூன்றாம் தரப்பு சேவைகளுக்காக குக்கீகளை பயன்படுத்துகிறோம்.",
+        btnReject: "நான் ஒப்புக்கொள்ளவில்லை",
+        btnCustomize: "தனிப்பயனாக்கு",
+        btnAccept: "அனைத்தையும் ஏற்கவும்",
+        modalTitle: "தனியுரிமை விருப்பத்தேர்வுகள்",
+        btnOptOutAll: "அனைத்து தேவையற்றவற்றையும் நிறுத்து",
+        btnRestore: "பரிந்துரைக்கப்பட்ட அமைப்புகளை மீட்டமை",
+        btnSave: "விருப்பத்தேர்வுகளை சேமி",
+        settingsBtn: "⚙️ தனியுரிமை அமைப்புகள்",
+        toastSaved: "விருப்பத்தேர்வுகள் சேமிக்கப்பட்டன",
+        regionBadgeGDPR: "கண்டறியப்பட்ட பிராந்தியம்: EU (GDPR)",
+        regionBadgeDPDP: "கண்டறியப்பட்ட பிராந்தியம்: இந்தியா (DPDP)",
+        dpdpNote: "இந்தியாவின் DPDP சட்டத்தின்படி, ஒப்புதல் வெளிப்படையாகவும் காலவரையறையாகவும் இருக்க வேண்டும்.",
+        rightsNote: "உங்கள் உரிமைகள்:",
+        rightsNoteBody: "தனியுரிமை சம்பவம் ஏற்பட்டால், உங்களுக்கு",
+        rightsNoteBody2: "விதிகளின்படி அறிவிக்கப்படும்.",
+        rightsTitle: "🛡️ உங்கள் தரவு உரிமைகள்",
+        rightsIntro: "DPDP மற்றும் GDPR கீழ் உங்கள் தனிப்பட்ட தரவு எவ்வாறு பயன்படுத்தப்படுகிறது என்பதை கட்டுப்படுத்தும் உரிமை உங்களுக்கு உள்ளது:",
+        rightsAccess: "📄 அணுகல்: உங்கள் தனிப்பட்ட தரவின் நகலை கோரவும்.",
+        rightsRectification: "✏️ திருத்தம்: தவறான தரவை சரிசெய்யவும்.",
+        rightsErasure: "🗑️ நீக்கம்: உங்கள் தரவை நீக்குமாறு கோரவும்.",
+        rightsRestriction: "⛔ கட்டுப்பாடு: உங்கள் தரவின் பயன்பாட்டை வரையறுக்கவும்.",
+        rightsObjection: "🚫 எதிர்ப்பு: சந்தைப்படுத்தலில் இருந்து விலகவும்.",
+        rightsPortability: "🔄 பெயர்வுத்திறன்: உங்கள் தரவை ஏற்றுமதி செய்யவும்.",
+        rightsWithdraw: "🔓 ஒப்புதலை திரும்பப் பெறவும்: எப்போதும் விருப்பத்தேர்வுகளை மாற்றவும்.",
+        rightsContact: "இந்த உரிமைகளை பயன்படுத்த எங்கள் தரவு பாதுகாப்பு அதிகாரியை தொடர்பு கொள்ளவும்.",
+        rightsClose: "மூடு",
+        riskTitle: "தனியுரிமை ஆபத்து",
+        riskLow: "குறைந்த ஆபத்து", riskMedium: "மிதமான ஆபத்து", riskHigh: "அதிக ஆபத்து",
+        riskKeyFactors: "முக்கிய காரணிகள்:",
+        riskOnlyNecessary: "அத்தியாவசிய செயல்முறைகள் மட்டுமே செயலில் உள்ளன.",
+        riskDefaultRec: "தற்போதைய அமைப்புகள் குறைந்தபட்ச தரவை பயன்படுத்துகின்றன.",
+        riskFactorAnalytics: "பகுப்பாய்வு இயக்கப்பட்டது: நடத்தை கண்காணிப்பு",
+        riskFactorMarketing: "சந்தைப்படுத்தல் இயக்கப்பட்டது: இலக்கு விளம்பரங்கள்",
+        riskFactorPersonalization: "தனிப்பயனாக்கம் இயக்கப்பட்டது",
+        riskFactorThirdParty: "மூன்றாம் தரப்பு பகிர்வு: வெளி விற்பனையாளர்களுக்கு தரவு",
+        riskRecHighDPDPThird: "DPDP கீழ் அதிக ஆபத்து: மூன்றாம் தரப்பு பகிர்வை முடக்கவும்.",
+        riskRecHighGDPRThird: "GDPR கீழ் அதிக ஆபத்து: மூன்றாம் தரப்பு பகிர்வை முடக்கவும்.",
+        riskRecHighMarketing: "சந்தைப்படுத்தல் ஆபத்து: சந்தைப்படுத்தல் குக்கீகளை முடக்கவும்.",
+        riskRecMedium: "மிதமான ஆபத்து: சந்தைப்படுத்தல் அல்லது தனிப்பயனாக்கத்தை கட்டுப்படுத்தவும்.",
+        riskRecLowDPDP: "குறைந்த ஆபத்து: தற்போதைய அமைப்புகள் DPDP உடன் ஒத்துள்ளன.",
+        riskRecLowGDPR: "குறைந்த ஆபத்து: தற்போதைய அமைப்புகள் GDPR கீழ் குறைந்த தரவை பயன்படுத்துகின்றன.",
+        vendorModalTitle: "விற்பனையாளர்கள் மற்றும் தரவு பகிர்வு",
+        vendorPurposeLabel: "நோக்கம்:", vendorDataLabel: "பகிரப்பட்ட தரவு:",
+        vendorNotSpecified: "குறிப்பிடவில்லை", vendorNone: "தற்போது வெளி விற்பனையாளர்கள் யாரும் இல்லை.",
+        vendorError: "விற்பனையாளர் தரவை ஏற்ற முடியவில்லை.", vendorClose: "மூடு",
+        viewVendorsBtn: "விற்பனையாளர்கள் & தரவு பகிர்வு காண்க →",
+        viewRightsBtn: "உங்கள் உரிமைகளை காண்க →",
+        consentDurationLabel: "ஒப்புதல் காலம்",
+        duration24h: "24 மணி நேரம்", duration30d: "1 மாதம்", duration365d: "1 ஆண்டு",
+      },
+      kn: {
+        bannerTitle: "🔒 ENCRYPT CMP",
+        bannerText: "ಅಗತ್ಯ ಕಾರ್ಯಕ್ಷಮತೆ, ವಿಶ್ಲೇಷಣೆ, ಮಾರ್ಕೆಟಿಂಗ್, ವೈಯಕ್ತಿಕಗೊಳಿಸುವಿಕೆ ಮತ್ತು ಮೂರನೇ ಪಕ್ಷ ಸೇವೆಗಳಿಗಾಗಿ ಕುಕೀಗಳನ್ನು ಬಳಸುತ್ತೇವೆ.",
+        btnReject: "ನಾನು ಒಪ್ಪುವುದಿಲ್ಲ",
+        btnCustomize: "ಕಸ್ಟಮೈಸ್ ಮಾಡಿ",
+        btnAccept: "ಎಲ್ಲವನ್ನೂ ಸ್ವೀಕರಿಸಿ",
+        modalTitle: "ಗೌಪ್ಯತಾ ಆದ್ಯತೆಗಳು",
+        btnOptOutAll: "ಅನಗತ್ಯ ಎಲ್ಲವನ್ನೂ ನಿಲ್ಲಿಸಿ",
+        btnRestore: "ಶಿಫಾರಸು ಮಾಡಿದ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಮರುಸ್ಥಾಪಿಸಿ",
+        btnSave: "ಆದ್ಯತೆಗಳನ್ನು ಉಳಿಸಿ",
+        settingsBtn: "⚙️ ಗೌಪ್ಯತಾ ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
+        toastSaved: "ಆದ್ಯತೆಗಳನ್ನು ಉಳಿಸಲಾಗಿದೆ",
+        regionBadgeGDPR: "ಪತ್ತೆಯಾದ ಪ್ರದೇಶ: EU (GDPR)",
+        regionBadgeDPDP: "ಪತ್ತೆಯಾದ ಪ್ರದೇಶ: ಭಾರತ (DPDP)",
+        dpdpNote: "ಭಾರತದ DPDP ಕಾಯ್ದೆ ಪ್ರಕಾರ, ಒಪ್ಪಿಗೆ ಸ್ಪಷ್ಟ ಮತ್ತು ಸಮಯ-ಸೀಮಿತವಾಗಿರಬೇಕು.",
+        rightsNote: "ನಿಮ್ಮ ಹಕ್ಕುಗಳು:",
+        rightsNoteBody: "ಗೌಪ್ಯತಾ ಘಟನೆ ಸಂದರ್ಭದಲ್ಲಿ, ನಿಮಗೆ",
+        rightsNoteBody2: "ನಿಯಮಗಳ ಪ್ರಕಾರ ತಿಳಿಸಲಾಗುವುದು.",
+        rightsTitle: "🛡️ ನಿಮ್ಮ ಡೇಟಾ ಹಕ್ಕುಗಳು",
+        rightsIntro: "DPDP ಮತ್ತು GDPR ಅಡಿಯಲ್ಲಿ ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಡೇಟಾ ಹೇಗೆ ಬಳಸಲಾಗುತ್ತದೆ ಎಂಬುದನ್ನು ನಿಯಂತ್ರಿಸುವ ಹಕ್ಕು ನಿಮಗಿದೆ:",
+        rightsAccess: "📄 ಪ್ರವೇಶ: ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಡೇಟಾದ ಪ್ರತಿ ಕೋರಿ.",
+        rightsRectification: "✏️ ತಿದ್ದುಪಡಿ: ತಪ್ಪಾದ ಡೇಟಾ ಸರಿಪಡಿಸಿ.",
+        rightsErasure: "🗑️ ಅಳಿಸುವಿಕೆ: ನಿಮ್ಮ ಡೇಟಾ ತೆಗೆದುಹಾಕಲು ಕೋರಿ.",
+        rightsRestriction: "⛔ ನಿರ್ಬಂಧ: ನಿಮ್ಮ ಡೇಟಾ ಬಳಕೆ ಮಿತಿಗೊಳಿಸಿ.",
+        rightsObjection: "🚫 ಆಕ್ಷೇಪಣೆ: ಮಾರ್ಕೆಟಿಂಗ್‌ನಿಂದ ಹೊರಗೆ ಹೋಗಿ.",
+        rightsPortability: "🔄 ಪೋರ್ಟಬಿಲಿಟಿ: ನಿಮ್ಮ ಡೇಟಾ ರಫ್ತು ಮಾಡಿ.",
+        rightsWithdraw: "🔓 ಒಪ್ಪಿಗೆ ಹಿಂಪಡೆಯಿರಿ: ಯಾವಾಗ ಬೇಕಾದರೂ ಆದ್ಯತೆ ಬದಲಿಸಿ.",
+        rightsContact: "ಈ ಹಕ್ಕುಗಳನ್ನು ಚಲಾಯಿಸಲು ನಮ್ಮ ಡೇಟಾ ಸಂರಕ್ಷಣಾ ಅಧಿಕಾರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ.",
+        rightsClose: "ಮುಚ್ಚಿ",
+        riskTitle: "ಗೌಪ್ಯತಾ ಅಪಾಯ",
+        riskLow: "ಕಡಿಮೆ ಅಪಾಯ", riskMedium: "ಮಧ್ಯಮ ಅಪಾಯ", riskHigh: "ಹೆಚ್ಚಿನ ಅಪಾಯ",
+        riskKeyFactors: "ಪ್ರಮುಖ ಅಂಶಗಳು:",
+        riskOnlyNecessary: "ಅಗತ್ಯ ಪ್ರಕ್ರಿಯೆಗಳು ಮಾತ್ರ ಸಕ್ರಿಯವಾಗಿವೆ.",
+        riskDefaultRec: "ಪ್ರಸ್ತುತ ಸೆಟ್ಟಿಂಗ್‌ಗಳು ಕನಿಷ್ಠ ಡೇಟಾ ಬಳಸುತ್ತಿವೆ.",
+        riskFactorAnalytics: "ವಿಶ್ಲೇಷಣೆ ಸಕ್ರಿಯ: ನಡವಳಿಕೆ ಟ್ರ್ಯಾಕಿಂಗ್",
+        riskFactorMarketing: "ಮಾರ್ಕೆಟಿಂಗ್ ಸಕ್ರಿಯ: ಗುರಿ ಜಾಹೀರಾತುಗಳು",
+        riskFactorPersonalization: "ವೈಯಕ್ತಿಕಗೊಳಿಸುವಿಕೆ ಸಕ್ರಿಯ",
+        riskFactorThirdParty: "ಮೂರನೇ ಪಕ್ಷ ಹಂಚಿಕೆ: ಬಾಹ್ಯ ಮಾರಾಟಗಾರರಿಗೆ ಡೇಟಾ",
+        riskRecHighDPDPThird: "DPDP ಅಡಿಯಲ್ಲಿ ಹೆಚ್ಚಿನ ಅಪಾಯ: ಮೂರನೇ ಪಕ್ಷ ಹಂಚಿಕೆ ನಿಲ್ಲಿಸಿ.",
+        riskRecHighGDPRThird: "GDPR ಅಡಿಯಲ್ಲಿ ಹೆಚ್ಚಿನ ಅಪಾಯ: ಮೂರನೇ ಪಕ್ಷ ಹಂಚಿಕೆ ನಿಲ್ಲಿಸಿ.",
+        riskRecHighMarketing: "ಮಾರ್ಕೆಟಿಂಗ್ ಅಪಾಯ: ಮಾರ್ಕೆಟಿಂಗ್ ಕುಕೀಗಳನ್ನು ನಿಲ್ಲಿಸಿ.",
+        riskRecMedium: "ಮಧ್ಯಮ ಅಪಾಯ: ಮಾರ್ಕೆಟಿಂಗ್ ಅಥವಾ ವೈಯಕ್ತಿಕಗೊಳಿಸುವಿಕೆ ಮಿತಿಗೊಳಿಸಿ.",
+        riskRecLowDPDP: "ಕಡಿಮೆ ಅಪಾಯ: ಪ್ರಸ್ತುತ ಸೆಟ್ಟಿಂಗ್‌ಗಳು DPDP ಜೊತೆ ಹೊಂದಾಣಿಕೆಯಾಗಿವೆ.",
+        riskRecLowGDPR: "ಕಡಿಮೆ ಅಪಾಯ: ಪ್ರಸ್ತುತ ಸೆಟ್ಟಿಂಗ್‌ಗಳು GDPR ಅಡಿಯಲ್ಲಿ ಸೀಮಿತ ಡೇಟಾ ಬಳಸುತ್ತಿವೆ.",
+        vendorModalTitle: "ಮಾರಾಟಗಾರರು ಮತ್ತು ಡೇಟಾ ಹಂಚಿಕೆ",
+        vendorPurposeLabel: "ಉದ್ದೇಶ:", vendorDataLabel: "ಹಂಚಿದ ಡೇಟಾ:",
+        vendorNotSpecified: "ನಿರ್ದಿಷ್ಟಪಡಿಸಲಾಗಿಲ್ಲ", vendorNone: "ಪ್ರಸ್ತುತ ಬಾಹ್ಯ ಮಾರಾಟಗಾರರು ಇಲ್ಲ.",
+        vendorError: "ಮಾರಾಟಗಾರ ಡೇಟಾ ಲೋಡ್ ಆಗಲಿಲ್ಲ.", vendorClose: "ಮುಚ್ಚಿ",
+        viewVendorsBtn: "ಮಾರಾಟಗಾರರು & ಡೇಟಾ ಹಂಚಿಕೆ ನೋಡಿ →",
+        viewRightsBtn: "ನಿಮ್ಮ ಹಕ್ಕುಗಳನ್ನು ನೋಡಿ →",
+        consentDurationLabel: "ಒಪ್ಪಿಗೆ ಅವಧಿ",
+        duration24h: "24 ಗಂಟೆಗಳು", duration30d: "1 ತಿಂಗಳು", duration365d: "1 ವರ್ಷ",
+      },
+    };
+
+    /* ---------------- PURPOSE FALLBACK ---------------- */
+    const purposeFallback = {
+      en: {
+        necessary: { label: "Necessary", description: "Required for security, fraud prevention, session management, and core functionality. These cannot be disabled." },
+        analytics: { label: "Analytics", description: "Helps us understand how users interact with the website and where improvements are needed." },
+        marketing: { label: "Marketing", description: "Used to deliver relevant ads and measure campaign performance." },
+        personalization: { label: "Personalization", description: "Allows us to remember your preferences such as language and layout." },
+        third_party_sharing: { label: "Third‑party Sharing", description: "Allows limited data sharing with trusted partners providing analytics or ads." },
+      },
+
+      te: {
+        necessary: { label: "అవసరమైన", description: "భద్రత, మోసం నివారణ మరియు ప్రధాన కార్యాచరణ కోసం అవసరం." },
+        analytics: { label: "విశ్లేషణలు", description: "వెబ్‌సైట్ ఉపయోగం అర్థం చేసుకోవడానికి సహాయపడుతుంది." },
+        marketing: { label: "మార్కెటింగ్", description: "సంబంధిత ప్రకటనలు చూపించడానికి ఉపయోగిస్తారు." },
+        personalization: { label: "వ్యక్తిగతీకరణ", description: "భాష మరియు లేఅవుట్ ప్రాధాన్యతలను గుర్తుంచుకోవడానికి." },
+        third_party_sharing: { label: "మూడవ పక్ష భాగస్వామ్యం", description: "విశ్వసనీయ భాగస్వాములతో పరిమిత డేటా భాగస్వామ్యం." },
+      },
+      ta: {
+        necessary: { label: "அத்தியாவசியம்", description: "பாதுகாப்பு மற்றும் முக்கிய செயல்பாட்டிற்கு தேவை." },
+        analytics: { label: "பகுப்பாய்வு", description: "வலைத்தளம் எவ்வாறு பயன்படுத்தப்படுகிறது என புரிந்துகொள்ள." },
+        marketing: { label: "சந்தைப்படுத்தல்", description: "தொடர்புடைய விளம்பரங்களை வழங்க பயன்படுகிறது." },
+        personalization: { label: "தனிப்பயனாக்கம்", description: "மொழி மற்றும் தளவமைப்பு விருப்பங்களை நினைவில் வைக்க." },
+        third_party_sharing: { label: "மூன்றாம் தரப்பு பகிர்வு", description: "நம்பகமான கூட்டாளர்களுடன் குறைந்த தரவு பகிர்வு." },
+      },
+      kn: {
+        necessary: { label: "ಅಗತ್ಯ", description: "ಭದ್ರತೆ ಮತ್ತು ಮುಖ್ಯ ಕಾರ್ಯಚಟುವಟಿಕೆಗೆ ಅಗತ್ಯ." },
+        analytics: { label: "ವಿಶ್ಲೇಷಣೆ", description: "ವೆಬ್‌ಸೈಟ್ ಬಳಕೆ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ." },
+        marketing: { label: "ಮಾರ್ಕೆಟಿಂಗ್", description: "ಸಂಬಂಧಿತ ಜಾಹೀರಾತುಗಳನ್ನು ತೋರಿಸಲು ಬಳಸಲಾಗುತ್ತದೆ." },
+        personalization: { label: "ವೈಯಕ್ತಿಕಗೊಳಿಸುವಿಕೆ", description: "ಭಾಷೆ ಮತ್ತು ಲೇಔಟ್ ಆದ್ಯತೆಗಳನ್ನು ನೆನಪಿಸಿಕೊಳ್ಳಲು." },
+        third_party_sharing: { label: "ಮೂರನೇ ಪಕ್ಷ ಹಂಚಿಕೆ", description: "ವಿಶ್ವಾಸಾರ್ಹ ಪಾಲುದಾರರೊಂದಿಗೆ ಸೀಮಿತ ಡೇಟಾ ಹಂಚಿಕೆ." },
+      },
+      hi: {
+        necessary: { label: "आवश्यक", description: "सुरक्षा, धोखाधड़ी रोकथाम, सत्र प्रबंधन और मुख्य कार्यक्षमता के लिए आवश्यक। इन्हें बंद नहीं किया जा सकता।" },
+        analytics: { label: "विश्लेषण", description: "हमें यह समझने में मदद करता है कि उपयोगकर्ता वेबसाइट का उपयोग कैसे करते हैं और कहाँ सुधार की आवश्यकता है।" },
+        marketing: { label: "मार्केटिंग", description: "संबंधित विज्ञापन दिखाने और अभियानों के प्रदर्शन को मापने के लिए उपयोग किया जाता है।" },
+        personalization: { label: "निजीकरण", description: "आपकी भाषा और लेआउट जैसी प्राथमिकताओं को याद रखने में मदद करता है।" },
+        third_party_sharing: { label: "तृतीय‑पक्ष साझा करना", description: "विश्वसनीय भागीदारों के साथ सीमित डेटा साझा करने की अनुमति देता है जो विश्लेषण या विज्ञापन प्रदान करते हैं।" },
+      },
+    };
+
+    /* ---------------- STATE ---------------- */
+    let purposesState = {
+      necessary: true,
+      analytics: false,
+      marketing: false,
+      personalization: false,
+      third_party_sharing: false,
+    };
+
+    /* ---------------- RISK SCORE ---------------- */
+    function computeRiskFromPurposeState() {
+      const p = purposesState;
+      const t = translations[currentLang];
+      let score = 10;
+      const factors = [];
+      const isGDPR = consentModel === "gdpr";
+      const isDPDP = consentModel === "dpdp";
+
+      if (p.analytics) { score += isGDPR ? 15 : 10; factors.push(t.riskFactorAnalytics); }
+      if (p.marketing) { score += isGDPR ? 25 : 20; factors.push(t.riskFactorMarketing); }
+      if (p.personalization) { score += isGDPR ? 15 : 20; factors.push(t.riskFactorPersonalization); }
+      if (p.third_party_sharing) { score += isGDPR ? 30 : 35; factors.push(t.riskFactorThirdParty); }
+
+      score = Math.min(100, Math.max(0, score));
+
+      let level, color, levelKey;
+      if (score >= 70) { level = "High"; levelKey = "riskHigh"; color = "#ef4444"; }
+      else if (score >= 40) { level = "Medium"; levelKey = "riskMedium"; color = "#f59e0b"; }
+      else { level = "Low"; levelKey = "riskLow"; color = "#22c55e"; }
+
+      let recommendation = "";
+      if (level === "High") {
+        recommendation = p.third_party_sharing
+          ? (isDPDP ? t.riskRecHighDPDPThird : t.riskRecHighGDPRThird)
+          : t.riskRecHighMarketing;
+      } else if (level === "Medium") {
+        recommendation = t.riskRecMedium;
+      } else {
+        recommendation = isDPDP ? t.riskRecLowDPDP : t.riskRecLowGDPR;
+      }
+
+      return { score, level, levelKey, color, width: `${Math.max(20, score)}%`, factors, recommendation };
+    }
+
+    function updateRiskMeter() {
+      const { score, level, levelKey, color, width, factors, recommendation } = computeRiskFromPurposeState();
+      const t = translations[currentLang];
+      const label = document.getElementById("riskLabel");
+      const bar = document.getElementById("riskBar");
+      const scoreEl = document.getElementById("riskScore");
+      const factorsEl = document.getElementById("riskFactors");
+      const recEl = document.getElementById("riskRecommendation");
+      const riskTitleEl = document.getElementById("riskTitle");
+      const keyFactorsEl = document.getElementById("riskKeyFactorsLabel");
+      if (!label || !bar) return;
+      if (riskTitleEl) riskTitleEl.textContent = t.riskTitle;
+      if (keyFactorsEl) keyFactorsEl.textContent = t.riskKeyFactors;
+      label.textContent = t[levelKey] || level;
+      bar.style.background = color;
+      bar.style.width = width;
+      if (scoreEl) scoreEl.textContent = `${score}/100`;
+      if (factorsEl) {
+        factorsEl.innerHTML = "";
+        if (factors.length === 0) {
+          factorsEl.textContent = t.riskOnlyNecessary;
+        } else {
+          factors.forEach(f => { const li = document.createElement("li"); li.textContent = f; factorsEl.appendChild(li); });
+        }
+      }
+      if (recEl) recEl.textContent = recommendation || t.riskDefaultRec;
+      window.currentRisk = level.toLowerCase();
+    }
+
+    /* ---------------- EXPIRY ---------------- */
+    function computeExpiryISO(durationCode) {
+      const d = new Date();
+      if (durationCode === "24h") d.setHours(d.getHours() + 24);
+      else if (durationCode === "30d") d.setDate(d.getDate() + 30);
+      else if (durationCode === "365d") d.setDate(d.getDate() + 365);
+      else d.setFullYear(d.getFullYear() + 1);
+      return d.toISOString();
+    }
+
+    /* ---------------- LANGUAGE HANDLING ---------------- */
+    let currentLang = "en";
+
+    function applyLanguageBasic() {
+      const t = translations[currentLang];
+
+      // Banner
+      document.getElementById("btnReject").textContent = t.btnReject;
+      document.getElementById("btnCustomize").textContent = t.btnCustomize;
+      document.getElementById("btnAccept").textContent = t.btnAccept;
+      document.getElementById("bannerTitle").textContent = t.bannerTitle;
+      document.getElementById("bannerText").textContent = t.bannerText;
+      document.getElementById("dpdpNote").textContent = t.dpdpNote;
+
+      // Region badge (re-render with current model)
+      const badge = document.getElementById("regionBadge");
+      if (badge && badge.textContent) {
+        badge.textContent = consentModel === "dpdp" ? t.regionBadgeDPDP : t.regionBadgeGDPR;
+      }
+
+      // Modal controls
+      document.getElementById("modalTitle").textContent = t.modalTitle;
+      document.getElementById("btnOptOutAll").textContent = t.btnOptOutAll;
+      document.getElementById("btnRestore").textContent = t.btnRestore;
+      document.getElementById("btnSave").textContent = t.btnSave;
+      document.getElementById("settingsBtn").textContent = t.settingsBtn;
+      document.getElementById("toast").textContent = t.toastSaved;
+
+      // View links
+      document.getElementById("viewVendorsBtn").textContent = t.viewVendorsBtn;
+      document.getElementById("viewRightsBtn").textContent = t.viewRightsBtn;
+
+      // Consent duration label & options
+      document.getElementById("consentDurationLabel").textContent = t.consentDurationLabel;
+      const dur = document.getElementById("consentDuration");
+      if (dur) {
+        dur.options[0].textContent = t.duration24h;
+        dur.options[1].textContent = t.duration30d;
+        dur.options[2].textContent = t.duration365d;
+      }
+
+      // Rights inline note
+      const rightsNoteEl = document.getElementById("rightsInlineNote");
+      if (rightsNoteEl) {
+        rightsNoteEl.innerHTML =
+          `<strong>${t.rightsNote}</strong><br>${t.rightsNoteBody} ` +
+          `<span style="color:#5a4295;">DPDP Act</span> ${currentLang === "hi" ? "और" : "and"} ` +
+          `<span style="color:#5a4295;">GDPR</span> ${t.rightsNoteBody2}`;
+      }
+
+      // Rights panel
+      document.getElementById("rightsPanelTitle").textContent = t.rightsTitle;
+      document.getElementById("rightsPanelIntro").textContent = t.rightsIntro;
+      document.getElementById("rightsItemAccess").textContent = t.rightsAccess;
+      document.getElementById("rightsItemRectification").textContent = t.rightsRectification;
+      document.getElementById("rightsItemErasure").textContent = t.rightsErasure;
+      document.getElementById("rightsItemRestriction").textContent = t.rightsRestriction;
+      document.getElementById("rightsItemObjection").textContent = t.rightsObjection;
+      document.getElementById("rightsItemPortability").textContent = t.rightsPortability;
+      document.getElementById("rightsItemWithdraw").textContent = t.rightsWithdraw;
+      document.getElementById("rightsItemContact").textContent = t.rightsContact;
+      document.getElementById("rightsCloseBtn").textContent = t.rightsClose;
+
+      // Vendor modal
+      document.getElementById("vendorModalTitle").textContent = t.vendorModalTitle;
+      document.getElementById("closeVendorModal").textContent = t.vendorClose;
+
+      // Risk meter static labels (dynamic parts handled in updateRiskMeter)
+      updateRiskMeter();
+
+      document.getElementById("btnEnglish").classList.toggle("active", currentLang === "en");
+      document.getElementById("btnHindi").classList.toggle("active", currentLang === "hi");
+      const teBtn = document.getElementById("btnTelugu"); if(teBtn) teBtn.classList.toggle("active", currentLang === "te");
+      const taBtn = document.getElementById("btnTamil"); if(taBtn) taBtn.classList.toggle("active", currentLang === "ta");
+      const knBtn = document.getElementById("btnKannada"); if(knBtn) knBtn.classList.toggle("active", currentLang === "kn");
+    }
+
+    document.getElementById("btnEnglish").onclick = () => { currentLang = "en"; applyLanguageBasic(); applyPurposesText(); };
+    document.getElementById("btnHindi").onclick = () => { currentLang = "hi"; applyLanguageBasic(); applyPurposesText(); };
+    document.getElementById("btnTelugu").onclick = () => { currentLang = "te"; applyLanguageBasic(); applyPurposesText(); };
+    document.getElementById("btnTamil").onclick = () => { currentLang = "ta"; applyLanguageBasic(); applyPurposesText(); };
+    document.getElementById("btnKannada").onclick = () => { currentLang = "kn"; applyLanguageBasic(); applyPurposesText(); };
+
+    /* ---------------- SUPABASE ---------------- */
+    const supabaseUrl = "https://lykbbpgctjmjkkdrnshu.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5a2JicGdjdGptamtrZHJuc2h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0NjcyNzIsImV4cCI6MjA4MTA0MzI3Mn0.U7UpV-PAyuJYzHivzmwcflT0Aj0U2ypihM4sdhNfbdw";
+    const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+    window.client = client;
+
+    /* ---------------- BLOCKCHAIN (BUG FIX #2: wrapped in try/catch) ---------------- */
+    const contractAddress = "0x3C31ABfc34AA5Eb310f2fE724fFc5F681361077c"; // Sepolia
+    const contractABI = [[
+      { "inputs": [{ "internalType": "bytes32", "name": "id", "type": "bytes32" }], "name": "revokeConsentHash", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+      { "inputs": [{ "internalType": "bytes32", "name": "id", "type": "bytes32" }, { "internalType": "bool", "name": "status", "type": "bool" }], "name": "storeConsentHash", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+      { "inputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }], "name": "consentStatus", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" },
+      { "inputs": [{ "internalType": "bytes32", "name": "id", "type": "bytes32" }], "name": "getConsentHistory", "outputs": [{ "components": [{ "internalType": "bytes32", "name": "id", "type": "bytes32" }, { "internalType": "bool", "name": "status", "type": "bool" }, { "internalType": "uint256", "name": "timestamp", "type": "uint256" }], "internalType": "struct ConsentVault.ConsentRecord[]", "name": "", "type": "tuple[]" }], "stateMutability": "view", "type": "function" },
+      { "inputs": [{ "internalType": "bytes32", "name": "id", "type": "bytes32" }], "name": "verifyConsentHash", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" }
+    ]];
+
+    async function getContract() {
+      if (!window.ethereum) throw new Error("No Web3 wallet detected");
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = provider.getSigner();
+      return new ethers.Contract(contractAddress, contractABI, signer);
+    }
+
+    // Returns consentId string or null if blockchain unavailable
+    async function storeConsentOnChain(purpose, status) {
+      try {
+        const contract = await getContract();
+        const consentId = ethers.utils.keccak256(
+          ethers.utils.toUtf8Bytes(deviceId + ":" + purpose)
+        );
+        await contract.storeConsentHash(consentId, status);
+        return consentId;
+      } catch (err) {
+        console.warn("Blockchain write skipped (no wallet or error):", err.message);
+        return null;
+      }
+    }
+
+    /* ---------------- REGION DETECTION ---------------- */
+    const GDPR_COUNTRIES = [
+      "AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR","DE","GR","HU","IE",
+      "IT","LV","LT","LU","MT","NL","PL","PT","RO","SK","SI","ES","SE","NO",
+      "IS","LI","UK"
+    ];
+
+    let geoCountry = null;
+    let consentModel = "gdpr";
+
+    async function detectCountryAndModel() {
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        const geo = await res.json();
+        geoCountry = geo.country || null;
+        if (GDPR_COUNTRIES.includes(geoCountry)) consentModel = "gdpr";
+        else if (geoCountry === "IN") consentModel = "dpdp";
+        else consentModel = "gdpr";
+      } catch (err) {
+        geoCountry = null;
+        consentModel = "gdpr";
+      }
+    }
+
+    document.getElementById("regionSim").onchange = async (e) => {
+      const val = e.target.value;
+      if (val === "IN") { geoCountry = "IN"; consentModel = "dpdp"; }
+      else if (val === "FR") { geoCountry = "FR"; consentModel = "gdpr"; }
+      else { await detectCountryAndModel(); }
+      showBanner();
+    };
+
+    /* ---------------- DEVICE ID ---------------- */
+    let deviceId = localStorage.getItem("device_id");
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem("device_id", deviceId);
+    }
+
+    /* ---------------- DOM ELEMENTS ---------------- */
+    const banner = document.getElementById("cmpBanner");
+    const modal = document.getElementById("cmpModal");
+    const toast = document.getElementById("toast");
+    const settingsBtn = document.getElementById("settingsBtn");
+
+    const toggleAnalytics = document.getElementById("analytics");
+    const toggleMarketing = document.getElementById("marketing");
+    const togglePersonalization = document.getElementById("personalization");
+    const toggleThird = document.getElementById("third_party_sharing");
+
+    toggleAnalytics.addEventListener("change", () => { purposesState.analytics = toggleAnalytics.checked; updateRiskMeter(); });
+    toggleMarketing.addEventListener("change", () => { purposesState.marketing = toggleMarketing.checked; updateRiskMeter(); });
+    togglePersonalization.addEventListener("change", () => { purposesState.personalization = togglePersonalization.checked; updateRiskMeter(); });
+    toggleThird.addEventListener("change", () => { purposesState.third_party_sharing = toggleThird.checked; updateRiskMeter(); });
+
+    /* ---------------- UI HELPERS ---------------- */
+    function showToast() {
+      toast.style.display = "block";
+      setTimeout(() => (toast.style.display = "none"), 2500);
+    }
+
+    function showBanner() {
+      const t = translations[currentLang];
+      const badge = document.getElementById("regionBadge");
+      const rejectBtn = document.getElementById("btnReject");
+      const dpdpNote = document.getElementById("dpdpNote");
+      if (consentModel === "dpdp") {
+        badge.textContent = t.regionBadgeDPDP;
+        rejectBtn.style.display = "none";
+        dpdpNote.style.display = "block";
+      } else {
+        badge.textContent = t.regionBadgeGDPR;
+        rejectBtn.style.display = "inline-block";
+        dpdpNote.style.display = "none";
+      }
+      banner.style.display = "block";
+    }
+
+    function hideBanner() { banner.style.display = "none"; }
+
+    function showModal() {
+      modal.style.display = "flex";
+      document.body.classList.add("modal-open");
+      document.getElementById("riskMeter").style.display = "block";
+      updateRiskMeter();
+    }
+
+    function hideModal() {
+      modal.style.display = "none";
+      document.body.classList.remove("modal-open");
+    }
+
+    /* ---------------- AUDIT LOG ---------------- */
+    async function logAuditEvent(eventType, actorId, actorRole, details = {}) {
+      try {
+        const { data, error } = await client
+          .from("audit_logs")
+          .insert({ event_type: eventType, actor_id: actorId, actor_role: actorRole, details, created_at: new Date().toISOString() })
+          .select();
+        if (error) console.error("Audit log error:", error);
+        else console.log("Audit log inserted:", data);
+      } catch (err) {
+        console.warn("Audit log failed:", err.message);
+      }
+    }
+
+    /* ---------------- CONSENT RECEIPT ---------------- */
+    async function generateConsentReceipt(subjectId, purposes, expiryISO) {
+      try {
+        const ip = await fetch("https://api.ipify.org?format=json")
+          .then(r => r.json()).then(j => j.ip).catch(() => null);
+        const receipt = {
+          subject_id: subjectId,
+          purposes,
+          policy_version: (cmpSettings && cmpSettings.policy_version) || "v1.0",
+          expires_at: expiryISO,
+          ip_address: ip,
+          user_agent: navigator.userAgent
+        };
+        const { data, error } = await client.from("consent_receipts").insert(receipt).select().single();
+        if (error) console.error("Consent receipt error:", error);
+        return data;
+      } catch (err) {
+        console.warn("Consent receipt failed:", err.message);
+        return null;
+      }
+    }
+
+    /* ---------------- LOAD SETTINGS & PURPOSES ---------------- */
+    let cmpSettings = null;
+    let purposesCache = null;
+
+    async function loadCMPSettings() {
+      const { data } = await client.from("cmp_settings").select("*").eq("id", 1).maybeSingle();
+      cmpSettings = data || null;
+    }
+
+    async function loadPurposes() {
+      const { data } = await client.from("purposes_master").select("*");
+      purposesCache = data || null;
+      applyPurposesText();
+    }
+
+    function applyPurposesText() {
+      const pf = purposeFallback[currentLang];
+      const ids = ["necessary", "analytics", "marketing", "personalization", "third_party_sharing"];
+      const map = {};
+      if (purposesCache) purposesCache.forEach(p => { if (p.id) map[p.id] = p; });
+
+      ids.forEach(id => {
+        const fb = pf[id];
+        const label = (fb && fb.label) || id.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+        const desc = (fb && fb.description) || "";
+        const camelId = id === "third_party_sharing" ? "Third"
+          : id.charAt(0).toUpperCase() + id.slice(1);
+        document.getElementById("p" + camelId).textContent = label;
+        document.getElementById("d" + camelId).textContent = desc;
+      });
+    }
+
+    /* ---------------- VENDOR MODAL ---------------- */
+    async function loadVendors() {
+      const t = translations[currentLang];
+      const { data, error } = await client.from("scripts_registry").select("name, purpose_id, data_elements").eq("enabled", true);
+      const container = document.getElementById("vendorList");
+      container.innerHTML = "";
+      if (error) { container.innerHTML = `<p>${t.vendorError}</p>`; return; }
+      if (!data || data.length === 0) { container.innerHTML = `<p>${t.vendorNone}</p>`; return; }
+      data.forEach(v => {
+        const shared = Array.isArray(v.data_elements) && v.data_elements.length > 0 ? v.data_elements.join(", ") : t.vendorNotSpecified;
+        const div = document.createElement("div");
+        div.style.marginBottom = "14px";
+        div.innerHTML = `
+          <div style="font-weight:600; color:#5a4295;">${v.name}</div>
+          <div style="font-size:13px; opacity:0.8;">${t.vendorPurposeLabel} ${v.purpose_id.replace(/_/g, " ")}</div>
+          <div style="font-size:13px; opacity:0.8;">${t.vendorDataLabel} ${shared}</div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    document.getElementById("viewVendorsBtn").onclick = async () => {
+      await loadVendors();
+      document.getElementById("vendorModal").style.display = "flex";
+    };
+    document.getElementById("closeVendorModal").onclick = () => {
+      document.getElementById("vendorModal").style.display = "none";
+    };
+    document.getElementById("vendorModal").onclick = e => {
+      if (e.target.id === "vendorModal") document.getElementById("vendorModal").style.display = "none";
+    };
+
+    document.getElementById("viewRightsBtn").onclick = () => {
+      const section = document.getElementById("rightsSection");
+      section.style.display = "block";
+      section.scrollIntoView({ behavior: "smooth" });
+    };
+
+    /* ---------------- SCRIPT LOADING ---------------- */
+    async function loadScriptsForConsent(purposes) {
+      const { data } = await client.from("scripts_registry").select("*").eq("enabled", true);
+      const head = document.head;
+      const body = document.body;
+      (data || []).forEach(s => {
+        if (s.purpose_id !== "necessary" && !purposes[s.purpose_id]) return;
+        const el = document.createElement("script");
+        el.src = s.script_url;
+        if (s.async) el.async = true;
+        if (s.defer) el.defer = true;
+        if (s.load_position === "head") head.appendChild(el);
+        else body.appendChild(el);
+      });
+    }
+
+    /* ---------------- CONSENT STORAGE ---------------- */
+    async function loadConsentRecord() {
+      const { data } = await client
+        .from("consent_records")
+        .select("purposes, consent_expires_at, policy_version")
+        .eq("device_id", deviceId)
+        .maybeSingle();
+      if (!data) return null;
+      return { purposes: data.purposes, expiresAt: data.consent_expires_at, policyVersion: data.policy_version || null };
+    }
+
+    async function saveConsentRecord(purposes, expiresAtISO, receiptId) {
+      await client.from("consent_records").upsert(
+        {
+          device_id: deviceId,
+          purposes,
+          updated_at: new Date().toISOString(),
+          country: geoCountry,
+          consent_model: consentModel,
+          consent_expires_at: expiresAtISO,
+          policy_version: (cmpSettings && cmpSettings.policy_version) || "v1.0",
+          receipt_id: receiptId || null,
+        },
+        { onConflict: "device_id" }
+      );
+    }
+
+    /* ---------------- APPLY PURPOSES TO UI ---------------- */
+    function applyPurposesToUI(purposes) {
+      purposesState = { ...purposesState, ...purposes };
+      toggleAnalytics.checked = !!purposesState.analytics;
+      toggleMarketing.checked = !!purposesState.marketing;
+      togglePersonalization.checked = !!purposesState.personalization;
+      toggleThird.checked = !!purposesState.third_party_sharing;
+      document.getElementById("riskMeter").style.display = "block";
+      updateRiskMeter();
+    }
+
+    /* ---------------- SHARED SAVE LOGIC ---------------- */
+    async function handleConsentSave(purposes, eventType) {
+      const duration = document.getElementById("consentDuration")?.value || "30d";
+      const expiry = computeExpiryISO(duration);
+
+      applyPurposesToUI(purposes);
+
+      // Generate receipt (graceful — won't block if Supabase fails)
+      const receipt = await generateConsentReceipt(deviceId, purposes, expiry);
+
+      // Blockchain writes — each is try/caught inside storeConsentOnChain
+      for (const [purpose, status] of Object.entries(purposes)) {
+        const consentId = await storeConsentOnChain(purpose, status);
+        await logAuditEvent(eventType, deviceId, "user", {
+          purpose, status, consent_id: consentId, expiry, receipt_id: receipt?.id,
+        });
+      }
+
+      // Save to Supabase
+      await saveConsentRecord(purposes, expiry, receipt?.id);
+      window.currentRisk = computeRiskFromPurposeState().level.toLowerCase();
+
+      await logAuditEvent(eventType + "_summary", deviceId, "user", {
+        purposes, region: consentModel || "OTHER",
+        risk_score: window.currentRisk, expiry, receipt_id: receipt?.id,
+      });
+
+      await loadScriptsForConsent(purposes);
+      hideBanner();
+      hideModal();
+      settingsBtn.style.display = "block";
+      showToast();
+    }
+
+    /* ---------------- BUTTON HANDLERS ---------------- */
+    document.getElementById("btnCustomize").onclick = showModal;
+
+    document.getElementById("btnAccept").onclick = () => handleConsentSave({
+      necessary: true, analytics: true, marketing: true, personalization: true, third_party_sharing: true,
+    }, "consent_accept_all");
+
+    document.getElementById("btnReject").onclick = () => handleConsentSave({
+      necessary: true, analytics: false, marketing: false, personalization: false, third_party_sharing: false,
+    }, "consent_reject_all");
+
+    document.getElementById("btnSave").onclick = () => handleConsentSave({
+      necessary: true,
+      analytics: toggleAnalytics.checked,
+      marketing: toggleMarketing.checked,
+      personalization: togglePersonalization.checked,
+      third_party_sharing: toggleThird.checked,
+    }, "consent_save_prefs");
+
+    document.getElementById("btnOptOutAll").onclick = () => {
+      toggleAnalytics.checked = false;
+      toggleMarketing.checked = false;
+      togglePersonalization.checked = false;
+      toggleThird.checked = false;
+      purposesState.analytics = false;
+      purposesState.marketing = false;
+      purposesState.personalization = false;
+      purposesState.third_party_sharing = false;
+      updateRiskMeter();
+    };
+
+    document.getElementById("btnRestore").onclick = () => {
+      toggleAnalytics.checked = true;
+      toggleMarketing.checked = false;
+      togglePersonalization.checked = false;
+      toggleThird.checked = false;
+      purposesState.analytics = true;
+      purposesState.marketing = false;
+      purposesState.personalization = false;
+      purposesState.third_party_sharing = false;
+      updateRiskMeter();
+    };
+
+    settingsBtn.onclick = showModal;
+
+    modal.addEventListener("click", e => { if (e.target === modal) hideModal(); });
+
+    /* ---------------- INIT CMP ---------------- */
+    (async function initCMP() {
+      applyLanguageBasic();
+      await detectCountryAndModel();
+      await loadCMPSettings();
+      await loadPurposes();
+
+      const existing = await loadConsentRecord();
+
+      if (existing && existing.purposes) {
+        const now = new Date();
+        const expiresAt = existing.expiresAt ? new Date(existing.expiresAt) : null;
+        const isExpired = expiresAt && expiresAt < now;
+        const currentPolicyVersion = (cmpSettings && cmpSettings.policy_version) || "v1.0";
+        const versionMismatch = existing.policyVersion && existing.policyVersion !== currentPolicyVersion;
+
+        if (!isExpired && !versionMismatch) {
+          applyPurposesToUI(existing.purposes);
+          await loadScriptsForConsent(existing.purposes);
+          settingsBtn.style.display = "block";
+          hideBanner();
+          return;
+        }
+      }
+
+      showBanner();
+      settingsBtn.style.display = "none";
+    })();
+  </script>
+</body>
+</html>

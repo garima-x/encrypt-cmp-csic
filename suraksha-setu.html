@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SurakshaSetu — National FIR Portal | MHA India</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink:    #0a0a0f;
+      --ink2:   #1c1c2e;
+      --saffron:#e8610a;
+      --saffron2:#f97316;
+      --green:  #046a38;
+      --green2: #16a34a;
+      --navy:   #0f172a;
+      --steel:  #1e293b;
+      --mist:   #f1f5f9;
+      --ash:    #94a3b8;
+      --white:  #ffffff;
+      --red:    #dc2626;
+      --amber:  #d97706;
+      --mono:   'IBM Plex Mono', monospace;
+      --sans:   'IBM Plex Sans', sans-serif;
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--ink);
+      color: var(--white);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── SCAN LINE OVERLAY ── */
+    body::before {
+      content:'';
+      position:fixed; inset:0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.012) 2px, rgba(255,255,255,0.012) 4px);
+      pointer-events:none; z-index:9998;
+    }
+
+    /* ── ASHOKA STRIP ── */
+    .ashoka-strip {
+      background: linear-gradient(90deg, #e8610a, #e8610a 33%, white 33%, white 66%, #046a38 66%);
+      height: 5px;
+    }
+
+    /* ── GOVT BAR ── */
+    .govt-bar {
+      background: var(--navy);
+      padding: 8px 40px;
+      display:flex; align-items:center; justify-content:space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .govt-bar-left { display:flex; align-items:center; gap:20px; font-size:11px; color:rgba(255,255,255,0.45); font-family:var(--mono); }
+    .govt-bar-left span { color:rgba(255,255,255,0.65); }
+    .emblem { display:flex; align-items:center; gap:8px; }
+    .emblem-circle {
+      width:28px; height:28px; border-radius:50%;
+      background: linear-gradient(135deg, #e8610a, #046a38);
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px;
+    }
+    .emblem-text { font-size:11px; font-weight:600; letter-spacing:0.06em; color:rgba(255,255,255,0.8); }
+    .secret-badge {
+      font-family:var(--mono); font-size:9px; font-weight:600;
+      letter-spacing:0.15em; padding:3px 10px;
+      border:1px solid rgba(220,38,38,0.4); border-radius:3px;
+      color:#fca5a5; background:rgba(220,38,38,0.08);
+      animation: blink 3s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--steel);
+      padding: 0 40px;
+      display:flex; align-items:center; justify-content:space-between;
+      height:60px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      position:sticky; top:0; z-index:200;
+    }
+    .nav-brand { display:flex; align-items:center; gap:12px; }
+    .nav-logo {
+      width:36px; height:36px; border-radius:8px;
+      background:linear-gradient(135deg, var(--saffron), var(--green));
+      display:flex; align-items:center; justify-content:center;
+      font-size:16px;
+    }
+    .nav-title { font-size:17px; font-weight:700; letter-spacing:-0.02em; }
+    .nav-title span { color:var(--saffron); }
+    .nav-subtitle { font-size:10px; font-family:var(--mono); color:var(--ash); letter-spacing:0.08em; }
+    .nav-meta { display:flex; align-items:center; gap:16px; }
+    .nav-status {
+      display:flex; align-items:center; gap:6px;
+      font-size:11px; font-family:var(--mono); color:var(--green2);
+    }
+    .status-dot { width:6px; height:6px; border-radius:50%; background:var(--green2); animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,0.4)} 50%{box-shadow:0 0 0 6px rgba(22,163,74,0)} }
+    .nav-btn {
+      padding:8px 18px; border-radius:8px; font-size:12px; font-weight:600;
+      font-family:var(--sans); cursor:pointer; transition:all 0.18s; text-decoration:none;
+      display:inline-flex; align-items:center; gap:6px;
+    }
+    .nav-btn-p { background:var(--saffron); color:white; border:none; }
+    .nav-btn-p:hover { background:#d4550a; transform:translateY(-1px); }
+    .nav-btn-s { background:transparent; color:rgba(255,255,255,0.6); border:1px solid rgba(255,255,255,0.12); }
+    .nav-btn-s:hover { background:rgba(255,255,255,0.06); color:white; }
+
+    /* ── HERO ── */
+    .hero {
+      background: var(--ink2);
+      padding: 56px 40px 0;
+      display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center;
+      min-height:520px; position:relative; overflow:hidden;
+      border-bottom:1px solid rgba(255,255,255,0.06);
+    }
+    .hero::after {
+      content:'';
+      position:absolute; top:-100px; right:-100px;
+      width:500px; height:500px; border-radius:50%;
+      background: radial-gradient(circle, rgba(232,97,10,0.08) 0%, transparent 70%);
+      pointer-events:none;
+    }
+    .hero-kicker {
+      font-family:var(--mono); font-size:10px; font-weight:600;
+      letter-spacing:0.2em; color:var(--saffron); text-transform:uppercase;
+      margin-bottom:16px; display:flex; align-items:center; gap:8px;
+    }
+    .hero-kicker::before { content:''; width:24px; height:1px; background:var(--saffron); }
+    .hero h1 {
+      font-size:42px; font-weight:700; line-height:1.1;
+      letter-spacing:-0.03em; margin-bottom:16px;
+    }
+    .hero h1 em { font-style:normal; color:var(--saffron); }
+    .hero p { font-size:14px; color:rgba(255,255,255,0.5); line-height:1.8; margin-bottom:32px; max-width:460px; }
+    .hero-actions { display:flex; gap:12px; flex-wrap:wrap; }
+    .btn-hero {
+      padding:13px 24px; border-radius:10px; font-size:13px; font-weight:600;
+      cursor:pointer; transition:all 0.2s; text-decoration:none; font-family:var(--sans);
+      display:inline-flex; align-items:center; gap:8px; border:none;
+    }
+    .btn-hero-p { background:var(--saffron); color:white; box-shadow:0 4px 20px rgba(232,97,10,0.35); }
+    .btn-hero-p:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(232,97,10,0.45); }
+    .btn-hero-s { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.8); border:1px solid rgba(255,255,255,0.12); }
+    .btn-hero-s:hover { background:rgba(255,255,255,0.1); color:white; }
+    .hero-trust { margin-top:32px; display:flex; gap:20px; flex-wrap:wrap; }
+    .htrust { display:flex; align-items:center; gap:6px; font-size:11px; color:rgba(255,255,255,0.35); font-family:var(--mono); }
+    .htrust-dot { width:5px; height:5px; border-radius:50%; background:var(--green2); }
+
+    /* ── FIR CARD ── */
+    .fir-card {
+      background: var(--steel);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:16px; padding:24px;
+      position:relative; z-index:1; margin-bottom:-32px;
+    }
+    .fir-card-header {
+      display:flex; justify-content:space-between; align-items:center;
+      margin-bottom:20px;
+    }
+    .fir-card-title { font-size:13px; font-weight:700; color:var(--white); }
+    .fir-card-sub { font-size:10px; font-family:var(--mono); color:var(--ash); margin-top:2px; }
+    .fir-num {
+      font-family:var(--mono); font-size:11px;
+      background:rgba(232,97,10,0.15); border:1px solid rgba(232,97,10,0.3);
+      color:var(--saffron2); padding:4px 10px; border-radius:6px;
+    }
+    .fir-field { margin-bottom:14px; }
+    .fir-label { font-size:9px; font-family:var(--mono); letter-spacing:0.12em; color:var(--ash); text-transform:uppercase; margin-bottom:5px; }
+    .fir-input {
+      width:100%; padding:9px 12px;
+      background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+      border-radius:8px; font-size:12px; color:var(--white);
+      font-family:var(--sans); transition:all 0.2s; outline:none;
+    }
+    .fir-input:focus { border-color:rgba(232,97,10,0.4); background:rgba(232,97,10,0.03); }
+    .fir-input::placeholder { color:rgba(255,255,255,0.2); }
+    .fir-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .fir-select {
+      width:100%; padding:9px 12px;
+      background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+      border-radius:8px; font-size:12px; color:var(--white);
+      font-family:var(--sans); outline:none; cursor:pointer;
+    }
+    .fir-select option { background:var(--steel); color:white; }
+    .fir-submit {
+      width:100%; padding:12px;
+      background:linear-gradient(135deg, var(--saffron), #d4550a);
+      color:white; border:none; border-radius:10px; font-size:13px; font-weight:700;
+      cursor:pointer; font-family:var(--sans); transition:all 0.2s;
+      margin-top:8px; box-shadow:0 4px 16px rgba(232,97,10,0.3);
+    }
+    .fir-submit:hover { transform:translateY(-1px); box-shadow:0 6px 24px rgba(232,97,10,0.45); }
+    .fir-note { font-size:10px; color:rgba(255,255,255,0.25); text-align:center; margin-top:8px; font-family:var(--mono); }
+
+    /* ── STATS ── */
+    .stats-bar {
+      background:var(--navy);
+      border-top:1px solid rgba(255,255,255,0.05);
+      border-bottom:1px solid rgba(255,255,255,0.05);
+      padding:40px 40px 28px;
+      display:flex; justify-content:center; gap:60px; flex-wrap:wrap;
+    }
+    .stat { text-align:center; }
+    .stat-val { font-size:28px; font-weight:700; letter-spacing:-0.02em; font-family:var(--mono); }
+    .stat-val.orange { color:var(--saffron2); }
+    .stat-val.green { color:var(--green2); }
+    .stat-lbl { font-size:10px; font-family:var(--mono); color:var(--ash); margin-top:4px; letter-spacing:0.06em; text-transform:uppercase; }
+
+    /* ── SECTIONS ── */
+    .section { padding:64px 40px; max-width:1100px; margin:0 auto; }
+    .sec-eyebrow { font-size:10px; font-family:var(--mono); letter-spacing:0.18em; text-transform:uppercase; color:var(--saffron); margin-bottom:8px; }
+    .sec-title { font-size:28px; font-weight:700; letter-spacing:-0.02em; margin-bottom:8px; }
+    .sec-sub { font-size:14px; color:rgba(255,255,255,0.45); line-height:1.7; margin-bottom:40px; max-width:520px; }
+
+    /* ── CRIME TYPES ── */
+    .crime-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+    .crime-card {
+      background:var(--steel); border:1px solid rgba(255,255,255,0.07);
+      border-radius:14px; padding:20px; cursor:pointer;
+      transition:all 0.2s; position:relative; overflow:hidden;
+    }
+    .crime-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--saffron); opacity:0; transition:opacity 0.2s; }
+    .crime-card:hover { border-color:rgba(232,97,10,0.3); transform:translateY(-3px); }
+    .crime-card:hover::before { opacity:1; }
+    .crime-icon { font-size:24px; margin-bottom:10px; }
+    .crime-name { font-size:13px; font-weight:700; color:var(--white); margin-bottom:4px; }
+    .crime-ipc { font-size:10px; font-family:var(--mono); color:var(--ash); margin-bottom:8px; }
+    .crime-severity {
+      display:inline-block; font-size:9px; font-weight:700; font-family:var(--mono);
+      padding:2px 8px; border-radius:4px; letter-spacing:0.08em;
+    }
+    .sev-high { background:rgba(220,38,38,0.15); color:#fca5a5; border:1px solid rgba(220,38,38,0.25); }
+    .sev-med  { background:rgba(217,119,6,0.15);  color:#fcd34d; border:1px solid rgba(217,119,6,0.25); }
+    .sev-low  { background:rgba(22,163,74,0.12);  color:#86efac; border:1px solid rgba(22,163,74,0.2); }
+
+    /* ── DATA NOTICE ── */
+    .data-notice {
+      background:linear-gradient(135deg, rgba(220,38,38,0.08), rgba(220,38,38,0.03));
+      border:1px solid rgba(220,38,38,0.2); border-radius:16px;
+      padding:24px 28px; margin:0 40px 40px;
+      display:grid; grid-template-columns:auto 1fr; gap:16px; align-items:start;
+    }
+    .notice-icon { font-size:28px; }
+    .notice-title { font-size:14px; font-weight:700; color:#fca5a5; margin-bottom:6px; }
+    .notice-text { font-size:12px; color:rgba(255,255,255,0.55); line-height:1.7; }
+    .notice-tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .notice-tag {
+      font-size:9px; font-weight:700; font-family:var(--mono);
+      padding:2px 8px; border-radius:4px; letter-spacing:0.06em;
+      background:rgba(220,38,38,0.12); color:#fca5a5; border:1px solid rgba(220,38,38,0.2);
+    }
+
+    /* ══════════════════════════════
+       PRIVACY CONTROLS — REDESIGNED
+    ══════════════════════════════ */
+    .privacy-section {
+      background: var(--steel);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:20px; padding:32px;
+      margin:0 40px 48px;
+      position:relative; overflow:hidden;
+    }
+    .privacy-section::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg, var(--saffron), var(--green2), var(--saffron));
+    }
+    .ps-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+    .ps-title { font-size:18px; font-weight:700; letter-spacing:-0.01em; margin-bottom:3px; }
+    .ps-sub { font-size:12px; color:var(--ash); }
+    .ps-badge {
+      font-size:10px; font-family:var(--mono); font-weight:600; letter-spacing:0.06em;
+      padding:5px 12px; border-radius:8px;
+      background:rgba(232,97,10,0.12); color:var(--saffron2); border:1px solid rgba(232,97,10,0.2);
+    }
+    .consent-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:22px; }
+    .cpill {
+      padding:14px 12px; border-radius:12px; border:1px solid transparent; transition:all 0.2s;
+    }
+    .cpill.on  { background:rgba(22,163,74,0.07);   border-color:rgba(22,163,74,0.22); }
+    .cpill.off { background:rgba(220,38,38,0.06);    border-color:rgba(220,38,38,0.15); }
+    .cpill-name { font-size:9px; font-weight:700; font-family:var(--mono); color:var(--ash); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px; }
+    .cpill-status { font-size:12px; font-weight:700; margin-bottom:8px; }
+    .cpill.on  .cpill-status { color:#86efac; }
+    .cpill.off .cpill-status { color:#fca5a5; }
+    .cpill-btn {
+      width:100%; padding:5px 0; border-radius:7px; border:none;
+      font-size:10px; font-weight:700; cursor:pointer; font-family:var(--sans); transition:all 0.15s;
+    }
+    .cpill.on  .cpill-btn { background:rgba(220,38,38,0.12); color:#fca5a5; }
+    .cpill.on  .cpill-btn:hover { background:rgba(220,38,38,0.22); }
+    .cpill.off .cpill-btn { opacity:0.4; cursor:not-allowed; background:rgba(255,255,255,0.04); color:var(--ash); }
+    .cpill-locked { font-size:10px; color:var(--ash); font-style:italic; text-align:center; margin-top:4px; }
+    .ps-btns { display:flex; gap:10px; flex-wrap:wrap; }
+    .psbtn {
+      padding:10px 20px; border-radius:10px; border:none;
+      cursor:pointer; font-size:12px; font-weight:700;
+      font-family:var(--sans); transition:all 0.17s;
+      display:flex; align-items:center; gap:6px;
+    }
+    .psbtn-p { background:var(--saffron); color:white; box-shadow:0 4px 14px rgba(232,97,10,0.3); }
+    .psbtn-p:hover { background:#d4550a; transform:translateY(-1px); }
+    .psbtn-r { background:rgba(220,38,38,0.1); color:#fca5a5; border:1px solid rgba(220,38,38,0.2); }
+    .psbtn-r:hover { background:rgba(220,38,38,0.2); }
+    .psbtn-o { background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.1); }
+    .psbtn-o:hover { background:rgba(255,255,255,0.1); color:white; }
+
+    /* ── RECEIPT MODAL ── */
+    .receipt-modal {
+      position:fixed; inset:0;
+      background:rgba(10,10,15,0.7); backdrop-filter:blur(12px);
+      display:none; justify-content:center; align-items:center;
+      z-index:99999; padding:20px;
+    }
+    .receipt-modal.open { display:flex; animation:fadeIn 0.3s ease; }
+    @keyframes fadeIn { from{opacity:0}to{opacity:1} }
+    .receipt-card {
+      background: var(--steel);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:24px; width:100%; max-width:520px;
+      overflow:hidden; box-shadow:0 32px 80px rgba(0,0,0,0.6);
+      animation:slideUp 0.35s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes slideUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none} }
+    .receipt-header {
+      background:linear-gradient(135deg, #0f172a, #1e293b);
+      padding:24px 28px 20px;
+      border-bottom:1px solid rgba(255,255,255,0.06);
+    }
+    .receipt-header-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+    .receipt-logo { font-size:16px; font-weight:700; color:white; display:flex; align-items:center; gap:8px; }
+    .receipt-logo span { color:var(--saffron2); }
+    .receipt-badge {
+      font-size:9px; font-weight:700; font-family:var(--mono);
+      background:rgba(22,163,74,0.15); color:#86efac;
+      border:1px solid rgba(22,163,74,0.3); padding:3px 10px; border-radius:99px; letter-spacing:0.08em;
+    }
+    .receipt-title { font-size:11px; font-family:var(--mono); color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:0.12em; }
+    .receipt-id { font-size:10px; font-family:var(--mono); color:rgba(255,255,255,0.25); margin-top:3px; }
+    .receipt-body { padding:24px 28px; }
+    .receipt-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+    .receipt-row:last-of-type { border-bottom:none; }
+    .receipt-row-label { font-size:11px; font-family:var(--mono); color:var(--ash); text-transform:uppercase; letter-spacing:0.08em; }
+    .receipt-row-val { font-size:12px; font-weight:700; color:white; }
+    .receipt-purposes { margin:16px 0; }
+    .receipt-purposes-title { font-size:10px; font-family:var(--mono); color:var(--ash); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px; }
+    .rp-row { display:flex; justify-content:space-between; align-items:center; padding:7px 10px; border-radius:8px; margin-bottom:4px; }
+    .rp-row.granted { background:rgba(22,163,74,0.08); }
+    .rp-row.denied  { background:rgba(220,38,38,0.06); }
+    .rp-name { font-size:11px; font-weight:700; color:white; }
+    .rp-status { font-size:10px; font-weight:700; }
+    .rp-row.granted .rp-status { color:#86efac; }
+    .rp-row.denied  .rp-status { color:#fca5a5; }
+    .receipt-chain {
+      background:rgba(232,97,10,0.06); border:1px solid rgba(232,97,10,0.15);
+      border-radius:10px; padding:12px 14px; margin-top:14px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .receipt-chain-icon { font-size:18px; }
+    .receipt-chain-text { font-size:11px; color:rgba(255,255,255,0.5); line-height:1.5; }
+    .receipt-chain-text strong { color:var(--saffron2); }
+    .receipt-actions { display:flex; gap:10px; padding:0 28px 24px; }
+    .receipt-btn {
+      flex:1; padding:11px; border-radius:10px; border:none;
+      font-size:12px; font-weight:700; cursor:pointer;
+      font-family:var(--sans); transition:all 0.17s;
+    }
+    .receipt-btn-p { background:var(--saffron); color:white; }
+    .receipt-btn-p:hover { background:#d4550a; }
+    .receipt-btn-s { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.1); }
+    .receipt-btn-s:hover { background:rgba(255,255,255,0.1); }
+
+    /* ── HOW IT WORKS ── */
+    .hiw-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+    .hiw-step {
+      background:var(--steel); border:1px solid rgba(255,255,255,0.07);
+      border-radius:14px; padding:22px 16px; text-align:center; transition:all 0.2s;
+    }
+    .hiw-step:hover { transform:translateY(-3px); border-color:rgba(232,97,10,0.2); }
+    .hiw-num {
+      width:36px; height:36px; border-radius:50%;
+      background:linear-gradient(135deg,var(--saffron),#d4550a);
+      color:white; font-weight:700; font-size:14px; font-family:var(--mono);
+      display:flex; align-items:center; justify-content:center;
+      margin:0 auto 12px; box-shadow:0 4px 14px rgba(232,97,10,0.3);
+    }
+    .hiw-icon { font-size:24px; margin-bottom:8px; }
+    .hiw-title { font-size:13px; font-weight:700; margin-bottom:5px; }
+    .hiw-desc { font-size:11px; color:rgba(255,255,255,0.45); line-height:1.6; }
+
+    /* ── FOOTER ── */
+    footer {
+      background:var(--navy);
+      border-top:1px solid rgba(255,255,255,0.06);
+      padding:48px 40px 24px;
+    }
+    .footer-grid { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:40px; margin-bottom:36px; }
+    .fl-logo { font-size:18px; font-weight:700; margin-bottom:8px; letter-spacing:-0.01em; }
+    .fl-logo span { color:var(--saffron); }
+    .fl-desc { font-size:12px; color:rgba(255,255,255,0.35); line-height:1.7; margin-bottom:14px; }
+    .fl-reg { font-size:10px; font-family:var(--mono); color:rgba(255,255,255,0.2); line-height:1.9; }
+    .fc-title { font-size:10px; font-weight:700; font-family:var(--mono); color:rgba(255,255,255,0.4); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:12px; }
+    .fc-link { display:block; font-size:12px; color:rgba(255,255,255,0.3); text-decoration:none; margin-bottom:8px; transition:color 0.15s; }
+    .fc-link:hover { color:rgba(255,255,255,0.8); }
+    .footer-bottom { display:flex; justify-content:space-between; align-items:center; font-size:10px; font-family:var(--mono); color:rgba(255,255,255,0.18); border-top:1px solid rgba(255,255,255,0.06); padding-top:18px; flex-wrap:wrap; gap:8px; }
+    .comp-badges { display:flex; gap:6px; }
+    .comp-badge { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:4px; padding:2px 8px; font-size:9px; color:rgba(255,255,255,0.3); }
+
+    /* ── SENSITIVE DATA WARNING BADGE ── */
+    .sensitive-warning {
+      display:inline-flex; align-items:center; gap:6px;
+      background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.25);
+      border-radius:8px; padding:6px 12px;
+      font-size:11px; font-family:var(--mono); font-weight:600;
+      color:#fca5a5; letter-spacing:0.04em;
+      margin-bottom:20px;
+    }
+
+    @media(max-width:900px){
+      .hero { grid-template-columns:1fr; padding:48px 20px 60px; }
+      .hiw-grid { grid-template-columns:1fr 1fr; }
+      .footer-grid { grid-template-columns:1fr 1fr; }
+      nav, .govt-bar, .stats-bar { padding-left:20px; padding-right:20px; }
+      .data-notice, .privacy-section { margin-left:20px; margin-right:20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- RECEIPT MODAL -->
+<div class="receipt-modal" id="receiptModal" onclick="if(event.target===this)closeReceipt()">
+  <div class="receipt-card">
+    <div class="receipt-header">
+      <div class="receipt-header-top">
+        <div class="receipt-logo">Suraksha<span>Setu</span></div>
+        <div class="receipt-badge">✓ DPDP COMPLIANT</div>
+      </div>
+      <div class="receipt-title">Official Consent Receipt — FIR Data Processing</div>
+      <div class="receipt-id" id="receiptIdDisplay">Receipt ID: —</div>
+    </div>
+    <div class="receipt-body">
+      <div class="receipt-row">
+        <div class="receipt-row-label">Data Fiduciary</div>
+        <div class="receipt-row-val">Ministry of Home Affairs, GoI</div>
+      </div>
+      <div class="receipt-row">
+        <div class="receipt-row-label">Data Principal</div>
+        <div class="receipt-row-val" id="receiptDeviceId">—</div>
+      </div>
+      <div class="receipt-row">
+        <div class="receipt-row-label">Issued At</div>
+        <div class="receipt-row-val" id="receiptTimestamp">—</div>
+      </div>
+      <div class="receipt-row">
+        <div class="receipt-row-label">Expires At</div>
+        <div class="receipt-row-val" id="receiptExpiry">—</div>
+      </div>
+      <div class="receipt-row">
+        <div class="receipt-row-label">Legal Framework</div>
+        <div class="receipt-row-val" id="receiptModel">DPDP Act 2023</div>
+      </div>
+      <div class="receipt-purposes">
+        <div class="receipt-purposes-title">Sensitive Data Processing Consents</div>
+        <div id="receiptPurposes"></div>
+      </div>
+      <div class="receipt-chain">
+        <div class="receipt-chain-icon">⛓</div>
+        <div class="receipt-chain-text">
+          <strong>Blockchain Anchored</strong> — This receipt is cryptographically anchored via
+          ENCRYPT CMP ConsentVault on Ethereum Sepolia. Tamper-proof and independently verifiable.
+        </div>
+      </div>
+    </div>
+    <div class="receipt-actions">
+      <button class="receipt-btn receipt-btn-p" onclick="downloadReceipt()">⬇ Download JSON</button>
+      <button class="receipt-btn receipt-btn-s" onclick="closeReceipt()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ASHOKA STRIP -->
+<div class="ashoka-strip"></div>
+
+<!-- GOVT BAR -->
+<div class="govt-bar">
+  <div class="govt-bar-left">
+    <div class="emblem">
+      <div class="emblem-circle">🦁</div>
+      <div class="emblem-text">GOVERNMENT OF INDIA</div>
+    </div>
+    <span>|</span>
+    <span>Ministry of Home Affairs</span>
+    <span>|</span>
+    <span>National Crime Records Bureau</span>
+  </div>
+  <div class="secret-badge">● SENSITIVE DATA PORTAL</div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <div class="nav-logo">🚔</div>
+    <div>
+      <div class="nav-title">Suraksha<span>Setu</span></div>
+      <div class="nav-subtitle">NATIONAL FIR PORTAL · BETA v2.1</div>
+    </div>
+  </div>
+  <div class="nav-meta">
+    <div class="nav-status">
+      <div class="status-dot"></div>
+      PORTAL ONLINE
+    </div>
+    <a href="#" class="nav-btn nav-btn-s">Track FIR</a>
+    <a href="#privacy" class="nav-btn nav-btn-p">🔒 Data Controls</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-content">
+    <div class="hero-kicker">Secured by ENCRYPT CMP</div>
+    <div class="sensitive-warning">🔴 SENSITIVE PERSONAL DATA — DPDP Section 4 Applies</div>
+    <h1>File an FIR.<br>Your Data,<br><em>Your Control.</em></h1>
+    <p>India's first DPDP-compliant FIR portal. You decide exactly which of your sensitive personal data — biometrics, location, identity — gets processed, stored, and shared with investigating agencies.</p>
+    <div class="hero-actions">
+      <button class="btn-hero btn-hero-p" onclick="window.EncryptCMP && window.EncryptCMP.showBanner()">🚨 File FIR Now</button>
+      <a href="#privacy" class="btn-hero btn-hero-s">📋 My Data Rights</a>
+    </div>
+    <div class="hero-trust">
+      <div class="htrust"><span class="htrust-dot"></span> DPDP Act 2023 Compliant</div>
+      <div class="htrust"><span class="htrust-dot"></span> End-to-End Encrypted</div>
+      <div class="htrust"><span class="htrust-dot"></span> Blockchain Consent Proof</div>
+      <div class="htrust"><span class="htrust-dot"></span> NIC Certified Infrastructure</div>
+    </div>
+  </div>
+
+  <div class="fir-card">
+    <div class="fir-card-header">
+      <div>
+        <div class="fir-card-title">🚔 Quick FIR Registration</div>
+        <div class="fir-card-sub">REQUIRES EXPLICIT DPDP CONSENT · SECTION 6</div>
+      </div>
+      <div class="fir-num">FIR/2026/MH/XXXXX</div>
+    </div>
+    <div class="fir-row">
+      <div class="fir-field">
+        <div class="fir-label">Complainant Name</div>
+        <input class="fir-input" placeholder="Full Legal Name" />
+      </div>
+      <div class="fir-field">
+        <div class="fir-label">Aadhaar / ID Number</div>
+        <input class="fir-input" placeholder="XXXX-XXXX-XXXX" type="password"/>
+      </div>
+    </div>
+    <div class="fir-field">
+      <div class="fir-label">Nature of Offence</div>
+      <select class="fir-select">
+        <option>Select IPC Section...</option>
+        <option>IPC 302 — Murder</option>
+        <option>IPC 376 — Sexual Assault</option>
+        <option>IPC 420 — Fraud / Cheating</option>
+        <option>IPC 379 — Theft</option>
+        <option>IPC 498A — Domestic Violence</option>
+        <option>IT Act 66C — Identity Theft</option>
+        <option>POCSO Act — Child Protection</option>
+      </select>
+    </div>
+    <div class="fir-row">
+      <div class="fir-field">
+        <div class="fir-label">Incident Date</div>
+        <input class="fir-input" type="date" />
+      </div>
+      <div class="fir-field">
+        <div class="fir-label">Police Station</div>
+        <select class="fir-select">
+          <option>Select District...</option>
+          <option>Mumbai Central</option>
+          <option>Delhi South</option>
+          <option>Hyderabad Commissionerate</option>
+          <option>Chennai City</option>
+        </select>
+      </div>
+    </div>
+    <button class="fir-submit" onclick="window.EncryptCMP && window.EncryptCMP.showBanner()">
+      Proceed — Consent Required →
+    </button>
+    <div class="fir-note">⚠ Consent for sensitive data processing required before submission · DPDP Act 2023</div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat"><div class="stat-val orange">47.8L+</div><div class="stat-lbl">FIRs Filed Digitally</div></div>
+  <div class="stat"><div class="stat-val green">99.2%</div><div class="stat-lbl">Consent Compliance</div></div>
+  <div class="stat"><div class="stat-val orange">36</div><div class="stat-lbl">States / UTs Connected</div></div>
+  <div class="stat"><div class="stat-val green">2.1s</div><div class="stat-lbl">Avg. Consent Latency</div></div>
+  <div class="stat"><div class="stat-val orange">100%</div><div class="stat-lbl">Blockchain Anchored</div></div>
+</div>
+
+<!-- SENSITIVE DATA NOTICE -->
+<div class="data-notice">
+  <div class="notice-icon">⚠️</div>
+  <div>
+    <div class="notice-title">Sensitive Personal Data Notice — DPDP Act 2023, Section 4 & 6</div>
+    <div class="notice-text">Filing an FIR requires processing of sensitive personal data including your biometric information, precise location data, financial details (in fraud cases), health records (in assault cases), and identity documents. Under India's Digital Personal Data Protection Act 2023, you have the right to provide explicit, granular consent for each category of data and withdraw it at any time. Your data will not be shared with third parties beyond investigating agencies without separate consent.</div>
+    <div class="notice-tags">
+      <span class="notice-tag">DPDP ACT 2023</span>
+      <span class="notice-tag">SECTION 6 — EXPLICIT CONSENT</span>
+      <span class="notice-tag">SENSITIVE DATA — SEC 4</span>
+      <span class="notice-tag">RIGHT TO WITHDRAW</span>
+      <span class="notice-tag">NCRB DATA POLICY</span>
+      <span class="notice-tag">CERT-IN COMPLIANT</span>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section">
+  <div class="sec-eyebrow">Process</div>
+  <div class="sec-title">How FIR Filing Works</div>
+  <div class="sec-sub">DPDP-compliant from the first click — you control your data at every step</div>
+  <div class="hiw-grid">
+    <div class="hiw-step"><div class="hiw-num">1</div><div class="hiw-icon">🔒</div><div class="hiw-title">Give Consent</div><div class="hiw-desc">Explicit granular consent for each data category before anything is processed.</div></div>
+    <div class="hiw-step"><div class="hiw-num">2</div><div class="hiw-icon">📋</div><div class="hiw-title">File FIR</div><div class="hiw-desc">Submit only the data you consented to. Everything else stays with you.</div></div>
+    <div class="hiw-step"><div class="hiw-num">3</div><div class="hiw-icon">⛓</div><div class="hiw-title">Blockchain Receipt</div><div class="hiw-desc">Your consent is anchored on-chain. Tamper-proof proof of what you agreed to.</div></div>
+    <div class="hiw-step"><div class="hiw-num">4</div><div class="hiw-icon">🔄</div><div class="hiw-title">Revoke Anytime</div><div class="hiw-desc">Withdraw consent for non-essential data processing at any point after filing.</div></div>
+  </div>
+</div>
+
+<!-- CRIME TYPES -->
+<div class="section" style="padding-top:0;">
+  <div class="sec-eyebrow">Data Categories by Crime Type</div>
+  <div class="sec-title">What Data Each FIR Type Requires</div>
+  <div class="sec-sub">ENCRYPT CMP ensures purpose-bound consent — your data is only processed for what you agree to</div>
+  <div class="crime-grid">
+    <div class="crime-card"><div class="crime-icon">💰</div><div class="crime-name">Cyber / Financial Fraud</div><div class="crime-ipc">IPC 420 · IT Act 66C</div><span class="crime-severity sev-high">HIGH SENSITIVITY</span><div class="crime-desc" style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px;line-height:1.5;">Bank account details, transaction history, device fingerprints, IP logs</div></div>
+    <div class="crime-card"><div class="crime-icon">🏠</div><div class="crime-name">Theft / Burglary</div><div class="crime-ipc">IPC 379 · IPC 380</div><span class="crime-severity sev-med">MEDIUM SENSITIVITY</span><div class="crime-desc" style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px;line-height:1.5;">Precise location, property documents, CCTV footage consent</div></div>
+    <div class="crime-card"><div class="crime-icon">🚗</div><div class="crime-name">Road Accident</div><div class="crime-ipc">MV Act · IPC 304A</div><span class="crime-severity sev-med">MEDIUM SENSITIVITY</span><div class="crime-desc" style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px;line-height:1.5;">Medical records, location data, vehicle registration, witness details</div></div>
+    <div class="crime-card"><div class="crime-icon">📱</div><div class="crime-name">Cyberstalking / Harassment</div><div class="crime-ipc">IT Act 66A · IPC 354D</div><span class="crime-severity sev-high">HIGH SENSITIVITY</span><div class="crime-desc" style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px;line-height:1.5;">Social media data, device logs, communication records, biometrics</div></div>
+    <div class="crime-card"><div class="crime-icon">👶</div><div class="crime-name">Child Protection</div><div class="crime-ipc">POCSO Act 2012</div><span class="crime-severity sev-high">CRITICAL SENSITIVITY</span><div class="crime-desc" style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px;line-height:1.5;">Identity fully protected · Special consent guardian required · NCPCR oversight</div></div>
+    <div class="crime-card"><div class="crime-icon">🏦</div><div class="crime-name">Bank / UPI Fraud</div><div class="crime-ipc">IPC 420 · RBI Act</div><span class="crime-severity sev-high">HIGH SENSITIVITY</span><div class="crime-desc" style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px;line-height:1.5;">Full transaction graph, KYC data, mule account analysis</div></div>
+  </div>
+</div>
+
+<!-- PRIVACY CONTROLS -->
+<div class="privacy-section" id="privacy">
+  <div class="ps-header">
+    <div>
+      <div class="ps-title">🔒 Your Data Privacy Controls</div>
+      <div class="ps-sub">Manage exactly what sensitive data SurakshaSetu processes for your FIR</div>
+    </div>
+    <div class="ps-badge">⚡ ENCRYPT CMP · DPDP COMPLIANT</div>
+  </div>
+  <div class="consent-grid" id="consentGrid"></div>
+  <div class="ps-btns">
+    <button class="psbtn psbtn-p" onclick="window.EncryptCMP && window.EncryptCMP.showBanner()">⚙ Manage Consent</button>
+    <button class="psbtn psbtn-r" onclick="revokeAll()">❌ Revoke All</button>
+    <button class="psbtn psbtn-o" onclick="showReceipt()">🧾 Consent Receipt</button>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="fl-logo">Suraksha<span>Setu</span></div>
+      <div class="fl-desc">India's first DPDP-compliant digital FIR portal. Operated under Ministry of Home Affairs, Government of India. Built on ENCRYPT CMP — the consent management platform for sensitive data.</div>
+      <div class="fl-reg">Ministry of Home Affairs · North Block, New Delhi 110001<br>NCRB Portal ID: SS-DPDP-2026-001 · NIC Certified<br>Grievance Officer: dpo@surakhasetu.gov.in · 1800-XXX-SSETU</div>
+    </div>
+    <div>
+      <div class="fc-title">Services</div>
+      <a href="#" class="fc-link">File FIR Online</a>
+      <a href="#" class="fc-link">Track FIR Status</a>
+      <a href="#" class="fc-link">Withdraw FIR</a>
+      <a href="#" class="fc-link">Victim Support</a>
+    </div>
+    <div>
+      <div class="fc-title">Legal</div>
+      <a href="#" class="fc-link">DPDP Compliance</a>
+      <a href="#" class="fc-link">Data Principal Rights</a>
+      <a href="#" class="fc-link">Privacy Policy</a>
+      <a href="#" class="fc-link">RTI Information</a>
+    </div>
+    <div>
+      <div class="fc-title">Help</div>
+      <a href="#" class="fc-link">Emergency: 100</a>
+      <a href="#" class="fc-link">Women Helpline: 1091</a>
+      <a href="#" class="fc-link">Cyber Crime: 1930</a>
+      <a href="#" class="fc-link">Child Line: 1098</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Ministry of Home Affairs, Government of India. This is a demonstration portal for CSIC 1.0.</span>
+    <div class="comp-badges">
+      <span class="comp-badge">MHA</span>
+      <span class="comp-badge">NCRB</span>
+      <span class="comp-badge">DPDP</span>
+      <span class="comp-badge">NIC</span>
+      <span class="comp-badge">ENCRYPT CMP</span>
+    </div>
+  </div>
+</footer>
+
+<script src="encrypt-cmp.js" data-org="SurakshaSetu — MHA India" data-lang="hi"></script>
+
+<script>
+  const purposeDefs = [
+    { id:"necessary",           label:"Identity Verification", locked:true  },
+    { id:"analytics",           label:"Crime Analytics",       locked:false },
+    { id:"marketing",           label:"Legal Notifications",   locked:false },
+    { id:"personalization",     label:"Case Tracking",         locked:false },
+    { id:"third_party_sharing", label:"Agency Sharing",        locked:false },
+  ];
+
+  function refreshConsent() {
+    if (!window.EncryptCMP) return;
+    const c = window.EncryptCMP.getConsent();
+    const g = document.getElementById("consentGrid");
+    g.innerHTML = purposeDefs.map(p => {
+      const granted = !!c[p.id];
+      if (p.locked) {
+        return `<div class="cpill on">
+          <div class="cpill-name">${p.label}</div>
+          <div class="cpill-status">✅ Granted</div>
+          <div class="cpill-locked">Required for FIR</div>
+        </div>`;
+      }
+      return `<div class="cpill ${granted ? 'on' : 'off'}">
+        <div class="cpill-name">${p.label}</div>
+        <div class="cpill-status">${granted ? '✅ Granted' : '❌ Denied'}</div>
+        <button class="cpill-btn" onclick="revokeOne('${p.id}')" ${!granted ? 'disabled' : ''}>
+          ${granted ? 'Revoke' : 'Not active'}
+        </button>
+      </div>`;
+    }).join("");
+  }
+
+  function revokeOne(purpose) {
+    if (!window.EncryptCMP) return;
+    window.EncryptCMP.revokeConsent(purpose);
+    setTimeout(refreshConsent, 300);
+  }
+
+  function revokeAll() {
+    if (!window.EncryptCMP) return;
+    if (!confirm("Revoke all non-essential data processing consents for your FIR?")) return;
+    window.EncryptCMP.revokeAll();
+    setTimeout(refreshConsent, 300);
+  }
+
+  let lastReceiptData = null;
+
+  function showReceipt() {
+    if (!window.EncryptCMP) return;
+    const r = window.EncryptCMP.getReceipt();
+    if (!r) { alert("No consent receipt yet — please complete consent via the banner first."); return; }
+    lastReceiptData = r;
+
+    document.getElementById("receiptIdDisplay").textContent = "Receipt ID: " + (r.receipt_id||"—").slice(0,16) + "...";
+    document.getElementById("receiptDeviceId").textContent  = (r.device_id||"—").slice(0,18) + "...";
+    document.getElementById("receiptTimestamp").textContent = r.timestamp ? new Date(r.timestamp).toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"}) : "—";
+    document.getElementById("receiptExpiry").textContent    = r.expires_at ? new Date(r.expires_at).toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"}) : "—";
+    document.getElementById("receiptModel").textContent     = r.consent_model==="dpdp" ? "DPDP Act 2023 (India)" : "GDPR 2018 (EU)";
+
+    const purposeNames = { necessary:"Identity Verification", analytics:"Crime Analytics", marketing:"Legal Notifications", personalization:"Case Tracking", third_party_sharing:"Agency Sharing" };
+    document.getElementById("receiptPurposes").innerHTML = Object.entries(r.purposes||{}).map(([k,v]) =>
+      `<div class="rp-row ${v?'granted':'denied'}">
+        <div class="rp-name">${purposeNames[k]||k}</div>
+        <div class="rp-status">${v ? '✅ Granted' : '❌ Denied'}</div>
+      </div>`
+    ).join("");
+
+    document.getElementById("receiptModal").classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeReceipt() {
+    document.getElementById("receiptModal").classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  function downloadReceipt() {
+    if (!lastReceiptData) return;
+    const blob = new Blob([JSON.stringify(lastReceiptData,null,2)],{type:"application/json"});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `fir-consent-receipt-${(lastReceiptData.receipt_id||"").slice(0,8)}.json`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
+  window.addEventListener("encrypt-cmp:ready",  refreshConsent);
+  window.addEventListener("encrypt-cmp:accept", refreshConsent);
+  window.addEventListener("encrypt-cmp:reject", refreshConsent);
+  window.addEventListener("encrypt-cmp:save",   refreshConsent);
+  window.addEventListener("encrypt-cmp:revoke", refreshConsent);
+  setTimeout(refreshConsent, 800);
+</script>
+</body>
+</html>

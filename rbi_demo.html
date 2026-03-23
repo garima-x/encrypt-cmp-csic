@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BharatFinance — RBI Regulated Digital Lending</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800;900&family=Nunito+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy:    #1e1540;
+      --purple:  #6c4fc4;
+      --purple2: #9b7fda;
+      --teal:    #3aab8a;
+      --gold:    #d97706;
+      --pink:    #d63384;
+      --light:   #f6f2ff;
+      --white:   #ffffff;
+      --border:  rgba(108,79,196,0.12);
+      --muted:   #7a6ea8;
+      --text2:   #4a4470;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: #f6f2ff;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 5% 0%, rgba(168,140,255,0.14) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 50% at 95% 100%, rgba(58,171,138,0.10) 0%, transparent 55%);
+      background-attachment: fixed;
+      color: var(--navy);
+    }
+
+    /* ── GOVT BAR ── */
+    .govt-bar {
+      background: linear-gradient(135deg, #2d1b69, #1e1540);
+      padding: 7px 40px;
+      display: flex; align-items:center; justify-content:space-between;
+      font-size: 11px; color: rgba(255,255,255,0.65);
+    }
+    .govt-bar-left { display:flex; align-items:center; gap:16px; }
+    .govt-bar a { color:rgba(255,255,255,0.55); text-decoration:none; transition:color 0.15s; }
+    .govt-bar a:hover { color:rgba(255,255,255,0.9); }
+    .rbi-badge {
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+      border-radius:6px; padding:3px 12px; font-size:10px; font-weight:700;
+      color:white; letter-spacing:0.08em;
+    }
+
+    /* ── NAV ── */
+    nav {
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(20px);
+      padding: 0 40px;
+      display: flex; align-items:center; justify-content:space-between;
+      box-shadow: 0 2px 20px rgba(108,79,196,0.10);
+      position: sticky; top:0; z-index:200; height: 66px;
+      border-bottom: 1px solid rgba(108,79,196,0.08);
+    }
+    .nav-logo { display:flex; align-items:center; gap:10px; }
+    .nav-logo-icon {
+      width:38px; height:38px;
+      background: linear-gradient(135deg, var(--navy), #3d2b7a);
+      border-radius:10px; display:flex; align-items:center; justify-content:center;
+      font-size:18px; box-shadow: 0 4px 12px rgba(108,79,196,0.25);
+    }
+    .nav-logo-text { font-size:20px; font-weight:900; color:var(--navy); letter-spacing:-0.02em; }
+    .nav-logo-text span { color:var(--purple); }
+    .nav-links { display:flex; align-items:center; gap:4px; }
+    .nav-links a {
+      text-decoration:none; font-size:13px; color:var(--text2); font-weight:600;
+      padding:7px 14px; border-radius:10px; transition:all 0.17s;
+    }
+    .nav-links a:hover { background:rgba(108,79,196,0.08); color:var(--purple); }
+    .nav-right { display:flex; align-items:center; gap:10px; }
+    .nav-login {
+      font-size:13px; font-weight:700; color:var(--purple); text-decoration:none;
+      padding:8px 18px; border-radius:12px;
+      border:1.5px solid rgba(108,79,196,0.25); transition:all 0.17s;
+    }
+    .nav-login:hover { background:rgba(108,79,196,0.06); }
+    .nav-apply {
+      font-size:13px; font-weight:700; color:white;
+      background: linear-gradient(135deg, var(--purple), #4a3280);
+      padding:9px 22px; border-radius:12px; text-decoration:none;
+      transition:all 0.17s; box-shadow:0 4px 16px rgba(108,79,196,0.30);
+    }
+    .nav-apply:hover { transform:translateY(-1px); box-shadow:0 7px 22px rgba(108,79,196,0.38); }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(135deg, #1e1540 0%, #2d1b69 50%, #1a2d4a 100%);
+      padding: 80px 40px 0;
+      display: grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center;
+      min-height: 580px; position:relative; overflow:hidden;
+    }
+    .hero::before {
+      content:''; position:absolute; inset:0;
+      background:
+        radial-gradient(ellipse 70% 60% at 80% 50%, rgba(108,79,196,0.30) 0%, transparent 65%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(58,171,138,0.15) 0%, transparent 60%);
+    }
+    .hero-content { position:relative; z-index:1; padding-bottom:80px; }
+    .hero-badges { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+    .hero-badge {
+      font-size:11px; font-weight:700; padding:5px 13px; border-radius:99px;
+      border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.75);
+      background:rgba(255,255,255,0.08); backdrop-filter:blur(8px);
+    }
+    .hero-badge.gold { border-color:rgba(217,119,6,0.4); color:#fbbf24; background:rgba(217,119,6,0.12); }
+    .hero h1 { font-size:46px; font-weight:900; color:white; line-height:1.1; margin-bottom:18px; letter-spacing:-0.03em; }
+    .hero h1 span { color:#b8a9ff; }
+    .hero p { font-size:15px; color:rgba(255,255,255,0.60); line-height:1.75; margin-bottom:32px; max-width:480px; }
+    .hero-btns { display:flex; gap:12px; flex-wrap:wrap; }
+    .btn-hero { padding:13px 26px; border-radius:13px; font-size:14px; font-weight:700; text-decoration:none; transition:all 0.2s; display:inline-flex; align-items:center; gap:8px; }
+    .btn-hero-p { background:linear-gradient(135deg,#9b7fda,#6c4fc4); color:white; box-shadow:0 6px 20px rgba(155,127,218,0.4); }
+    .btn-hero-p:hover { transform:translateY(-2px); box-shadow:0 10px 28px rgba(155,127,218,0.5); }
+    .btn-hero-s { background:rgba(255,255,255,0.10); color:white; border:1px solid rgba(255,255,255,0.20); backdrop-filter:blur(8px); }
+    .btn-hero-s:hover { background:rgba(255,255,255,0.18); }
+    .hero-trust { margin-top:36px; display:flex; gap:22px; flex-wrap:wrap; }
+    .htrust-item { display:flex; align-items:center; gap:6px; font-size:12px; color:rgba(255,255,255,0.45); }
+    .htrust-dot { width:6px; height:6px; border-radius:50%; background:#3aab8a; box-shadow:0 0 6px #3aab8a; }
+
+    /* ── CALC CARD ── */
+    .hero-card {
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(20px);
+      border-radius: 26px;
+      padding: 32px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.30), 0 0 0 1px rgba(255,255,255,0.6);
+      position:relative; z-index:1; margin-bottom:-40px;
+    }
+    .hcard-title { font-size:15px; font-weight:800; color:var(--navy); margin-bottom:3px; }
+    .hcard-sub { font-size:12px; color:#999; margin-bottom:22px; }
+    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
+    .field label { font-size:10px; font-weight:700; color:#aaa; letter-spacing:0.10em; text-transform:uppercase; display:block; margin-bottom:5px; }
+    .field input, .field select {
+      width:100%; padding:11px 13px; border-radius:12px;
+      border:1.5px solid rgba(108,79,196,0.14); font-size:13px;
+      font-family:'Nunito',sans-serif; font-weight:600;
+      color:var(--navy); background:#fafbff; outline:none; transition:all 0.2s;
+    }
+    .field input:focus, .field select:focus { border-color:var(--purple); background:white; box-shadow:0 0 0 3px rgba(108,79,196,0.08); }
+    .field input[type=range] { -webkit-appearance:none; height:5px; border-radius:3px; border:none; padding:0; cursor:pointer; }
+    .field input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:var(--purple); box-shadow:0 2px 8px rgba(108,79,196,0.35); cursor:pointer; }
+    .amt-display { font-size:22px; font-weight:900; color:var(--purple); margin-top:6px; letter-spacing:-0.02em; }
+    .emi-result {
+      background:linear-gradient(135deg, var(--navy), #3d2b7a);
+      border-radius:16px; padding:18px 22px;
+      display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px;
+    }
+    .emi-item-label { font-size:10px; color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:3px; }
+    .emi-item-val { font-size:19px; font-weight:900; color:white; letter-spacing:-0.01em; }
+    .apply-btn {
+      width:100%; padding:14px;
+      background:linear-gradient(135deg, var(--purple), #4a3280);
+      color:white; border:none; border-radius:13px; font-size:14px; font-weight:700;
+      cursor:pointer; font-family:'Nunito',sans-serif; transition:all 0.2s;
+      box-shadow:0 4px 16px rgba(108,79,196,0.28);
+    }
+    .apply-btn:hover { transform:translateY(-1px); box-shadow:0 7px 24px rgba(108,79,196,0.38); }
+    .field-note { font-size:10px; color:#bbb; text-align:center; margin-top:10px; }
+
+    /* ── STATS ── */
+    .stats {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(20px);
+      padding: 56px 40px 40px;
+      display: flex; justify-content:center; gap:48px; flex-wrap:wrap;
+      border-bottom:1px solid var(--border); margin-top:50px;
+    }
+    .stat { text-align:center; }
+    .stat-val { font-size:34px; font-weight:900; color:var(--navy); letter-spacing:-0.02em; }
+    .stat-val span { color:var(--purple); }
+    .stat-lbl { font-size:12px; color:var(--muted); margin-top:3px; font-weight:600; }
+
+    /* ── SECTION ── */
+    .section { padding:72px 40px; max-width:1100px; margin:0 auto; }
+    .sec-eyebrow { font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--purple); margin-bottom:8px; }
+    .sec-title { font-size:32px; font-weight:900; color:var(--navy); margin-bottom:8px; letter-spacing:-0.02em; }
+    .sec-sub { font-size:15px; color:var(--muted); margin-bottom:44px; max-width:560px; line-height:1.65; }
+
+    /* ── PRODUCTS ── */
+    .products-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:18px; }
+    .product-card {
+      background: rgba(255,255,255,0.90);
+      backdrop-filter: blur(20px);
+      border-radius:22px; padding:26px;
+      border:1.5px solid rgba(255,255,255,0.8);
+      box-shadow:0 4px 20px rgba(108,79,196,0.08);
+      transition:all 0.22s; cursor:pointer; position:relative; overflow:hidden;
+    }
+    .product-card::after { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--purple),var(--purple2)); border-radius:22px 22px 0 0; opacity:0; transition:opacity 0.2s; }
+    .product-card:hover { transform:translateY(-5px); box-shadow:0 18px 44px rgba(108,79,196,0.15); border-color:rgba(108,79,196,0.2); }
+    .product-card:hover::after { opacity:1; }
+    .pc-icon { font-size:30px; margin-bottom:12px; }
+    .pc-rate { font-size:26px; font-weight:900; color:var(--purple); letter-spacing:-0.02em; }
+    .pc-rate-lbl { font-size:11px; color:var(--muted); margin-bottom:10px; }
+    .pc-name { font-size:15px; font-weight:800; color:var(--navy); margin-bottom:6px; }
+    .pc-desc { font-size:12px; color:var(--muted); line-height:1.6; margin-bottom:14px; }
+    .pc-limit { display:inline-block; background:rgba(108,79,196,0.09); color:var(--purple); padding:4px 10px; border-radius:7px; font-size:11px; font-weight:700; }
+    .pc-time { display:inline-block; background:rgba(58,171,138,0.09); color:var(--teal); padding:4px 10px; border-radius:7px; font-size:11px; font-weight:600; margin-left:6px; }
+
+    /* ── HOW IT WORKS ── */
+    .hiw-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+    .hiw-step {
+      text-align:center; padding:28px 18px;
+      background:rgba(255,255,255,0.88); backdrop-filter:blur(18px);
+      border-radius:20px; border:1.5px solid rgba(255,255,255,0.8);
+      box-shadow:0 4px 16px rgba(108,79,196,0.07);
+      transition:all 0.2s;
+    }
+    .hiw-step:hover { transform:translateY(-3px); box-shadow:0 10px 30px rgba(108,79,196,0.12); }
+    .hiw-num { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,var(--purple),#4a3280); color:white; font-weight:900; font-size:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; box-shadow:0 4px 14px rgba(108,79,196,0.30); }
+    .hiw-icon { font-size:28px; margin-bottom:10px; }
+    .hiw-title { font-size:14px; font-weight:800; color:var(--navy); margin-bottom:6px; }
+    .hiw-desc { font-size:12px; color:var(--muted); line-height:1.6; }
+
+    /* ── DPDP NOTICE ── */
+    .dpdp-notice {
+      background:linear-gradient(135deg, rgba(255,251,235,0.95), rgba(254,249,195,0.90));
+      backdrop-filter:blur(18px);
+      border:1.5px solid rgba(251,191,36,0.35); border-radius:20px;
+      padding:28px 32px; margin:0 40px 48px;
+      display:grid; grid-template-columns:auto 1fr; gap:18px; align-items:start;
+      box-shadow:0 4px 20px rgba(217,119,6,0.10);
+    }
+    .dpdp-icon { font-size:36px; }
+    .dpdp-title { font-size:15px; font-weight:800; color:#92400e; margin-bottom:6px; }
+    .dpdp-text { font-size:13px; color:#78350f; line-height:1.7; }
+    .dpdp-tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .dpdp-tag { font-size:10px; font-weight:700; background:rgba(146,64,14,0.10); color:#92400e; padding:3px 10px; border-radius:6px; }
+
+    /* ══════════════════════════════════
+       PRIVACY CONTROLS — REDESIGNED
+    ══════════════════════════════════ */
+    .privacy-section {
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(24px);
+      border:1.5px solid rgba(255,255,255,0.9);
+      border-radius:28px; padding:40px;
+      margin:0 40px 56px;
+      box-shadow:0 8px 40px rgba(108,79,196,0.10);
+      position: relative; overflow: hidden;
+    }
+    .privacy-section::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:3px;
+      background:linear-gradient(90deg, var(--purple), var(--purple2), var(--teal));
+    }
+    .ps-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+    .ps-title { font-size:20px; font-weight:900; color:var(--navy); margin-bottom:4px; letter-spacing:-0.01em; }
+    .ps-sub { font-size:13px; color:var(--muted); }
+    .ps-powered {
+      font-size:11px; color:var(--purple); font-weight:700;
+      background:rgba(108,79,196,0.08); padding:6px 14px; border-radius:10px;
+      border:1px solid rgba(108,79,196,0.16); white-space:nowrap;
+    }
+
+    /* Purpose grid */
+    .consent-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:24px; }
+    .cpill {
+      padding:16px 14px; border-radius:16px;
+      border:1.5px solid transparent; transition:all 0.2s;
+      position:relative; overflow:hidden;
+    }
+    .cpill.on  { background:rgba(58,171,138,0.07);  border-color:rgba(58,171,138,0.25); }
+    .cpill.off { background:rgba(220,38,38,0.05);   border-color:rgba(220,38,38,0.16); }
+    .cpill-name { font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px; }
+    .cpill-status { font-size:13px; font-weight:800; margin-bottom:10px; }
+    .cpill.on  .cpill-status { color:#15803d; }
+    .cpill.off .cpill-status { color:#b91c1c; }
+    .cpill-revoke {
+      width:100%; padding:6px 0; border-radius:8px; border:none;
+      font-size:11px; font-weight:700; cursor:pointer;
+      font-family:'Nunito',sans-serif; transition:all 0.17s;
+    }
+    .cpill.on  .cpill-revoke { background:rgba(220,38,38,0.08); color:#b91c1c; }
+    .cpill.on  .cpill-revoke:hover { background:rgba(220,38,38,0.16); }
+    .cpill.off .cpill-revoke { background:rgba(58,171,138,0.08); color:#15803d; cursor:not-allowed; opacity:0.5; }
+    .cpill-locked { font-size:10px; color:var(--muted); font-style:italic; text-align:center; margin-top:4px; }
+
+    /* Action buttons */
+    .ps-btns { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:0; }
+    .psbtn {
+      padding:11px 22px; border-radius:13px; border:none;
+      cursor:pointer; font-size:13px; font-weight:700;
+      font-family:'Nunito',sans-serif; transition:all 0.17s;
+      display:flex; align-items:center; gap:7px;
+    }
+    .psbtn-p { background:linear-gradient(135deg,var(--purple),#4a3280); color:white; box-shadow:0 4px 16px rgba(108,79,196,0.28); }
+    .psbtn-p:hover { transform:translateY(-1px); box-shadow:0 7px 22px rgba(108,79,196,0.36); }
+    .psbtn-r { background:rgba(220,38,38,0.08); color:#b91c1c; border:1.5px solid rgba(220,38,38,0.18); }
+    .psbtn-r:hover { background:rgba(220,38,38,0.15); }
+    .psbtn-o { background:rgba(108,79,196,0.08); color:var(--purple); border:1.5px solid rgba(108,79,196,0.18); }
+    .psbtn-o:hover { background:rgba(108,79,196,0.15); }
+
+    /* Receipt modal */
+    .receipt-modal {
+      position:fixed; inset:0;
+      background:rgba(30,21,64,0.35); backdrop-filter:blur(10px);
+      display:none; justify-content:center; align-items:center;
+      z-index:99999; padding:20px;
+    }
+    .receipt-modal.open { display:flex; animation:fadeIn 0.3s ease; }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .receipt-card {
+      background: rgba(255,255,255,0.97);
+      border-radius:28px; width:100%; max-width:520px;
+      overflow:hidden;
+      box-shadow:0 32px 80px rgba(108,79,196,0.22), 0 0 0 1px rgba(255,255,255,0.9);
+      animation: slideUp 0.35s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+    .receipt-header {
+      background:linear-gradient(135deg, var(--navy), #3d2b7a);
+      padding:28px 30px 24px;
+    }
+    .receipt-header-top { display:flex; justify-content:space-between; align-items:flex-start; }
+    .receipt-logo { font-size:20px; font-weight:900; color:white; letter-spacing:-0.02em; }
+    .receipt-logo span { color:#b8a9ff; }
+    .receipt-badge {
+      font-size:10px; font-weight:700; background:rgba(58,171,138,0.20);
+      color:#6ee7b7; border:1px solid rgba(58,171,138,0.30);
+      padding:4px 12px; border-radius:99px; letter-spacing:0.06em;
+    }
+    .receipt-title { font-size:13px; color:rgba(255,255,255,0.55); margin-top:16px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; }
+    .receipt-id { font-size:11px; color:rgba(255,255,255,0.35); margin-top:4px; font-family:'Courier New',monospace; }
+    .receipt-body { padding:28px 30px; }
+    .receipt-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(108,79,196,0.07); }
+    .receipt-row:last-of-type { border-bottom:none; }
+    .receipt-row-label { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+    .receipt-row-val { font-size:13px; font-weight:700; color:var(--navy); }
+    .receipt-purposes { margin:16px 0; }
+    .receipt-purposes-title { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px; }
+    .receipt-purpose-row { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:10px; margin-bottom:5px; }
+    .receipt-purpose-row.granted { background:rgba(58,171,138,0.07); }
+    .receipt-purpose-row.denied  { background:rgba(220,38,38,0.05); }
+    .receipt-purpose-name { font-size:12px; font-weight:700; color:var(--navy); }
+    .receipt-purpose-status { font-size:11px; font-weight:700; }
+    .receipt-purpose-row.granted .receipt-purpose-status { color:#15803d; }
+    .receipt-purpose-row.denied  .receipt-purpose-status { color:#b91c1c; }
+    .receipt-blockchain {
+      background:rgba(108,79,196,0.06); border:1px solid rgba(108,79,196,0.14);
+      border-radius:12px; padding:12px 14px; margin-top:16px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .receipt-blockchain-icon { font-size:20px; }
+    .receipt-blockchain-text { font-size:11px; color:var(--muted); line-height:1.5; }
+    .receipt-blockchain-text strong { color:var(--purple); }
+    .receipt-actions { display:flex; gap:10px; padding:0 30px 28px; }
+    .receipt-btn {
+      flex:1; padding:12px; border-radius:13px; border:none;
+      font-size:13px; font-weight:700; cursor:pointer;
+      font-family:'Nunito',sans-serif; transition:all 0.17s;
+    }
+    .receipt-btn-p { background:linear-gradient(135deg,var(--purple),#4a3280); color:white; box-shadow:0 4px 14px rgba(108,79,196,0.28); }
+    .receipt-btn-p:hover { transform:translateY(-1px); }
+    .receipt-btn-s { background:rgba(108,79,196,0.08); color:var(--purple); border:1.5px solid rgba(108,79,196,0.18); }
+    .receipt-btn-s:hover { background:rgba(108,79,196,0.14); }
+
+    /* ── TESTIMONIALS ── */
+    .testi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+    .testi-card {
+      background:rgba(255,255,255,0.88); backdrop-filter:blur(18px);
+      border-radius:20px; padding:26px;
+      border:1.5px solid rgba(255,255,255,0.8);
+      box-shadow:0 4px 16px rgba(108,79,196,0.07);
+      transition:all 0.2s;
+    }
+    .testi-card:hover { transform:translateY(-3px); box-shadow:0 12px 32px rgba(108,79,196,0.12); }
+    .testi-stars { color:#f59e0b; font-size:14px; margin-bottom:12px; letter-spacing:2px; }
+    .testi-text { font-size:13px; color:var(--text2); line-height:1.75; margin-bottom:16px; font-style:italic; }
+    .testi-author { font-size:13px; font-weight:800; color:var(--navy); }
+    .testi-role { font-size:11px; color:var(--muted); }
+
+    /* ── FOOTER ── */
+    footer { background:linear-gradient(135deg, var(--navy), #2d1b69); padding:56px 40px 24px; }
+    .footer-grid { display:grid; grid-template-columns:2.5fr 1fr 1fr 1fr; gap:40px; margin-bottom:40px; }
+    .fl-logo { font-size:20px; font-weight:900; color:white; margin-bottom:10px; letter-spacing:-0.02em; }
+    .fl-logo span { color:#b8a9ff; }
+    .fl-desc { font-size:13px; color:rgba(255,255,255,0.38); line-height:1.7; margin-bottom:16px; }
+    .fl-reg { font-size:10px; color:rgba(255,255,255,0.28); line-height:1.9; }
+    .fc-title { font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); letter-spacing:0.10em; text-transform:uppercase; margin-bottom:14px; }
+    .fc-link { display:block; font-size:13px; color:rgba(255,255,255,0.38); text-decoration:none; margin-bottom:9px; transition:color 0.17s; }
+    .fc-link:hover { color:rgba(255,255,255,0.8); }
+    .footer-divider { border:none; border-top:1px solid rgba(255,255,255,0.07); margin-bottom:20px; }
+    .footer-bottom { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:rgba(255,255,255,0.22); flex-wrap:wrap; gap:10px; }
+    .comp-badges { display:flex; gap:8px; }
+    .comp-badge { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10); border-radius:6px; padding:3px 10px; font-size:10px; font-weight:700; color:rgba(255,255,255,0.38); }
+
+    @media(max-width:900px) {
+      .hero { grid-template-columns:1fr; padding:60px 20px 80px; }
+      .hero-card { margin-bottom:0; }
+      .hiw-grid { grid-template-columns:1fr 1fr; }
+      .testi-grid { grid-template-columns:1fr; }
+      .footer-grid { grid-template-columns:1fr 1fr; }
+      nav { padding:0 20px; }
+      .nav-links { display:none; }
+      .dpdp-notice, .privacy-section { margin:0 20px 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- RECEIPT MODAL -->
+<div class="receipt-modal" id="receiptModal" onclick="if(event.target===this)closeReceipt()">
+  <div class="receipt-card">
+    <div class="receipt-header">
+      <div class="receipt-header-top">
+        <div class="receipt-logo">Bharat<span>Finance</span></div>
+        <div class="receipt-badge">✓ DPDP COMPLIANT</div>
+      </div>
+      <div class="receipt-title">Official Consent Receipt</div>
+      <div class="receipt-id" id="receiptIdDisplay">Receipt ID: —</div>
+    </div>
+    <div class="receipt-body">
+      <div class="receipt-row">
+        <div class="receipt-row-label">Organisation</div>
+        <div class="receipt-row-val">BharatFinance (NBFC)</div>
+      </div>
+      <div class="receipt-row">
+        <div class="receipt-row-label">Issued To</div>
+        <div class="receipt-row-val" id="receiptDeviceId">—</div>
+      </div>
+      <div class="receipt-row">
+        <div class="receipt-row-label">Issued At</div>
+        <div class="receipt-row-val" id="receiptTimestamp">—</div>
+      </div>
+      <div class="receipt-row">
+        <div class="receipt-row-label">Expires At</div>
+        <div class="receipt-row-val" id="receiptExpiry">—</div>
+      </div>
+      <div class="receipt-row">
+        <div class="receipt-row-label">Legal Framework</div>
+        <div class="receipt-row-val" id="receiptModel">DPDP Act 2023</div>
+      </div>
+      <div class="receipt-purposes">
+        <div class="receipt-purposes-title">Consent Purposes</div>
+        <div id="receiptPurposes"></div>
+      </div>
+      <div class="receipt-blockchain">
+        <div class="receipt-blockchain-icon">⛓</div>
+        <div class="receipt-blockchain-text">
+          <strong>Blockchain Anchored</strong> — This receipt is cryptographically anchored on
+          Ethereum Sepolia Testnet via ENCRYPT CMP ConsentVault smart contract.
+          Tamper-proof and independently verifiable.
+        </div>
+      </div>
+    </div>
+    <div class="receipt-actions">
+      <button class="receipt-btn receipt-btn-p" onclick="downloadReceipt()">⬇ Download JSON</button>
+      <button class="receipt-btn receipt-btn-s" onclick="closeReceipt()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- GOVT BAR -->
+<div class="govt-bar">
+  <div class="govt-bar-left">
+    <span>🇮🇳 Government of India Initiative</span>
+    <a href="#">Ministry of Finance</a>
+    <a href="#">RBI Guidelines</a>
+    <a href="#">DPDP Act 2023</a>
+  </div>
+  <div class="rbi-badge">RBI REG: N-13.02142</div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">🏦</div>
+    <div class="nav-logo-text">Bharat<span>Finance</span></div>
+  </div>
+  <div class="nav-links">
+    <a href="#">Personal Loans</a>
+    <a href="#">Business Loans</a>
+    <a href="#">Home Loans</a>
+    <a href="#">EMI Calculator</a>
+    <a href="#">About</a>
+  </div>
+  <div class="nav-right">
+    <a href="#" class="nav-login">Login</a>
+    <a href="#" class="nav-apply">Apply Now →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-content">
+    <div class="hero-badges">
+      <span class="hero-badge gold">🏅 RBI Regulated NBFC</span>
+      <span class="hero-badge">⚡ 10-Min Disbursal</span>
+      <span class="hero-badge">🔒 DPDP Act Compliant</span>
+    </div>
+    <h1>India's Most Trusted<br>Digital Lending <span>Platform</span></h1>
+    <p>Collateral-free loans from ₹10,000 to ₹50 Lakhs. Fully compliant with RBI guidelines and India's Digital Personal Data Protection Act 2023.</p>
+    <div class="hero-btns">
+      <a href="#" class="btn-hero btn-hero-p">Check Eligibility ↗</a>
+      <a href="#privacy" class="btn-hero btn-hero-s">View Privacy Controls</a>
+    </div>
+    <div class="hero-trust">
+      <div class="htrust-item"><span class="htrust-dot"></span> ISO 27001 Certified</div>
+      <div class="htrust-item"><span class="htrust-dot"></span> PCI DSS Compliant</div>
+      <div class="htrust-item"><span class="htrust-dot"></span> 256-bit SSL Encrypted</div>
+      <div class="htrust-item"><span class="htrust-dot"></span> CERT-In Empanelled</div>
+    </div>
+  </div>
+  <div class="hero-card">
+    <div class="hcard-title">💰 Loan EMI Calculator</div>
+    <div class="hcard-sub">Instant estimate — no credit check required</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Loan Amount</label>
+        <input type="range" id="loanAmt" min="10000" max="5000000" step="10000" value="500000" oninput="calcEMI()">
+        <div class="amt-display" id="amtDisplay">₹5,00,000</div>
+      </div>
+      <div class="field">
+        <label>Loan Type</label>
+        <select id="loanType" onchange="calcEMI()">
+          <option value="10.5">Personal — 10.5%</option>
+          <option value="12.0">Business — 12.0%</option>
+          <option value="8.75">Home — 8.75%</option>
+          <option value="9.5">Education — 9.5%</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Tenure</label>
+        <select id="tenure" onchange="calcEMI()">
+          <option value="12">12 Months</option>
+          <option value="24">24 Months</option>
+          <option value="36" selected>36 Months</option>
+          <option value="48">48 Months</option>
+          <option value="60">60 Months</option>
+          <option value="84">84 Months</option>
+          <option value="120">120 Months</option>
+          <option value="240">240 Months</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Employment Type</label>
+        <select>
+          <option>Salaried</option>
+          <option>Self-employed</option>
+          <option>Business Owner</option>
+        </select>
+      </div>
+    </div>
+    <div class="emi-result">
+      <div><div class="emi-item-label">Monthly EMI</div><div class="emi-item-val" id="emiVal">₹16,134</div></div>
+      <div><div class="emi-item-label">Total Payable</div><div class="emi-item-val" id="totalVal">₹5,80,824</div></div>
+      <div><div class="emi-item-label">Interest</div><div class="emi-item-val" id="intVal">₹80,824</div></div>
+    </div>
+    <button class="apply-btn" onclick="alert('Redirect to loan application form')">Apply for This Loan →</button>
+    <div class="field-note">*Subject to credit assessment. T&C apply. RBI Regulated.</div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat"><div class="stat-val">₹<span>4,200</span> Cr+</div><div class="stat-lbl">Total Loans Disbursed</div></div>
+  <div class="stat"><div class="stat-val"><span>14.2</span> Lakh+</div><div class="stat-lbl">Active Borrowers</div></div>
+  <div class="stat"><div class="stat-val"><span>8.5</span>%</div><div class="stat-lbl">Starting Interest Rate</div></div>
+  <div class="stat"><div class="stat-val"><span>10</span> Min</div><div class="stat-lbl">Average Disbursal Time</div></div>
+  <div class="stat"><div class="stat-val"><span>4.8</span> ★</div><div class="stat-lbl">Customer Rating</div></div>
+</div>
+
+<!-- PRODUCTS -->
+<div class="section">
+  <div class="sec-eyebrow">Loan Products</div>
+  <div class="sec-title">Financial Solutions for Every Indian</div>
+  <div class="sec-sub">RBI-regulated, transparent, and fully DPDP-compliant lending across all categories</div>
+  <div class="products-grid">
+    <div class="product-card"><div class="pc-icon">👤</div><div class="pc-rate">10.5%</div><div class="pc-rate-lbl">p.a. onwards</div><div class="pc-name">Personal Loan</div><div class="pc-desc">Instant funds for medical emergencies, travel, marriage, or any personal need. Zero collateral.</div><span class="pc-limit">Up to ₹25 Lakhs</span><span class="pc-time">⚡ 10 min</span></div>
+    <div class="product-card"><div class="pc-icon">🏢</div><div class="pc-rate">12.0%</div><div class="pc-rate-lbl">p.a. onwards</div><div class="pc-name">Business Loan</div><div class="pc-desc">Working capital, equipment, inventory, or business expansion. Minimal documentation.</div><span class="pc-limit">Up to ₹50 Lakhs</span><span class="pc-time">⚡ 24 hrs</span></div>
+    <div class="product-card"><div class="pc-icon">🏠</div><div class="pc-rate">8.75%</div><div class="pc-rate-lbl">p.a. onwards</div><div class="pc-name">Home Loan</div><div class="pc-desc">Buy, build, or renovate your dream home with flexible tenures up to 30 years.</div><span class="pc-limit">Up to ₹2 Crore</span><span class="pc-time">📅 48 hrs</span></div>
+    <div class="product-card"><div class="pc-icon">🎓</div><div class="pc-rate">9.5%</div><div class="pc-rate-lbl">p.a. onwards</div><div class="pc-name">Education Loan</div><div class="pc-desc">India & abroad education funding with moratorium period and Section 80E tax benefit.</div><span class="pc-limit">Up to ₹75 Lakhs</span><span class="pc-time">📅 72 hrs</span></div>
+    <div class="product-card"><div class="pc-icon">🚗</div><div class="pc-rate">9.0%</div><div class="pc-rate-lbl">p.a. onwards</div><div class="pc-name">Vehicle Loan</div><div class="pc-desc">New or used car, two-wheeler, or commercial vehicle financing with quick approval.</div><span class="pc-limit">Up to ₹20 Lakhs</span><span class="pc-time">⚡ 6 hrs</span></div>
+    <div class="product-card"><div class="pc-icon">🌾</div><div class="pc-rate">7.0%</div><div class="pc-rate-lbl">p.a. onwards</div><div class="pc-name">Kisan Credit Card</div><div class="pc-desc">Agricultural credit for crop production, post-harvest, and allied activities under PM-KISAN.</div><span class="pc-limit">Up to ₹3 Lakhs</span><span class="pc-time">📅 48 hrs</span></div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section" style="padding-top:0;">
+  <div class="sec-eyebrow">Process</div>
+  <div class="sec-title">Apply in 4 Simple Steps</div>
+  <div class="sec-sub">From application to disbursal — fully digital, fully compliant</div>
+  <div class="hiw-grid">
+    <div class="hiw-step"><div class="hiw-num">1</div><div class="hiw-icon">📱</div><div class="hiw-title">Apply Online</div><div class="hiw-desc">Fill a simple form with basic details. No branch visit required.</div></div>
+    <div class="hiw-step"><div class="hiw-num">2</div><div class="hiw-icon">🔒</div><div class="hiw-title">Give Consent</div><div class="hiw-desc">Review exactly what data we need and give explicit DPDP-compliant consent.</div></div>
+    <div class="hiw-step"><div class="hiw-num">3</div><div class="hiw-icon">⚡</div><div class="hiw-title">Instant Approval</div><div class="hiw-desc">AI-powered credit assessment gives decision in under 60 seconds.</div></div>
+    <div class="hiw-step"><div class="hiw-num">4</div><div class="hiw-icon">💸</div><div class="hiw-title">Get Disbursed</div><div class="hiw-desc">Money directly to your bank account in minutes via IMPS/RTGS.</div></div>
+  </div>
+</div>
+
+<!-- DPDP NOTICE -->
+<div class="dpdp-notice">
+  <div class="dpdp-icon">📋</div>
+  <div>
+    <div class="dpdp-title">Data Privacy Notice — Digital Personal Data Protection Act 2023</div>
+    <div class="dpdp-text">BharatFinance collects your PAN, Aadhaar, bank statements, ITR, and credit bureau data solely for loan processing and credit assessment. Under India's DPDP Act 2023, you have the right to access, correct, and erase your personal data. Consent is revocable at any time. Your data is never sold to third parties without explicit consent.</div>
+    <div class="dpdp-tags">
+      <span class="dpdp-tag">DPDP Act 2023</span>
+      <span class="dpdp-tag">RBI Master Directions</span>
+      <span class="dpdp-tag">Data Localisation</span>
+      <span class="dpdp-tag">Aadhaar Act Compliant</span>
+      <span class="dpdp-tag">CERT-In Guidelines</span>
+    </div>
+  </div>
+</div>
+
+<!-- PRIVACY CONTROLS -->
+<div class="privacy-section" id="privacy">
+  <div class="ps-header">
+    <div>
+      <div class="ps-title">🔒 Your Data Privacy Controls</div>
+      <div class="ps-sub">Manage exactly what data BharatFinance uses — revoke any consent at any time</div>
+    </div>
+    <div class="ps-powered">⚡ Powered by ENCRYPT CMP</div>
+  </div>
+  <div class="consent-grid" id="consentGrid"></div>
+  <div class="ps-btns">
+    <button class="psbtn psbtn-p" onclick="window.EncryptCMP && window.EncryptCMP.showBanner()">⚙ Manage Preferences</button>
+    <button class="psbtn psbtn-r" onclick="revokeAll()">❌ Revoke All Consent</button>
+    <button class="psbtn psbtn-o" onclick="showReceipt()">🧾 View Consent Receipt</button>
+  </div>
+</div>
+
+<!-- TESTIMONIALS -->
+<div class="section" style="padding-top:0;">
+  <div class="sec-eyebrow">Borrower Stories</div>
+  <div class="sec-title">Trusted by Millions Across India</div>
+  <div class="sec-sub">Real customers, real experiences</div>
+  <div class="testi-grid">
+    <div class="testi-card"><div class="testi-stars">★★★★★</div><div class="testi-text">"Got ₹3 lakhs for my daughter's wedding in 8 minutes. The consent form was in Telugu which made me comfortable about my data privacy."</div><div class="testi-author">Ravi Kumar</div><div class="testi-role">Hyderabad, Telangana</div></div>
+    <div class="testi-card"><div class="testi-stars">★★★★★</div><div class="testi-text">"As a small business owner I was worried about data sharing. BharatFinance showed me exactly what data goes where and let me control it."</div><div class="testi-author">Priya Sharma</div><div class="testi-role">Chennai, Tamil Nadu</div></div>
+    <div class="testi-card"><div class="testi-stars">★★★★★</div><div class="testi-text">"The consent receipt they gave me was even on the blockchain! First time I felt truly in control of my financial data."</div><div class="testi-author">Anand Nair</div><div class="testi-role">Bengaluru, Karnataka</div></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="fl-logo">Bharat<span>Finance</span></div>
+      <div class="fl-desc">A RBI-registered Non-Banking Financial Company providing transparent, fast, and fully DPDP-compliant digital lending across India.</div>
+      <div class="fl-reg">CIN: U65929MH2020PTC348291 &nbsp;|&nbsp; RBI Reg No: N-13.02142<br>Registered Office: BharatFinance Tower, BKC, Mumbai 400051<br>Grievance Officer: grievance@bharatfinance.in &nbsp;|&nbsp; 1800-XXX-XXXX (Toll Free)</div>
+    </div>
+    <div>
+      <div class="fc-title">Products</div>
+      <a href="#" class="fc-link">Personal Loan</a><a href="#" class="fc-link">Business Loan</a><a href="#" class="fc-link">Home Loan</a><a href="#" class="fc-link">Education Loan</a><a href="#" class="fc-link">Kisan Credit</a>
+    </div>
+    <div>
+      <div class="fc-title">Company</div>
+      <a href="#" class="fc-link">About Us</a><a href="#" class="fc-link">RBI Disclosures</a><a href="#" class="fc-link">Annual Report</a><a href="#" class="fc-link">Careers</a>
+    </div>
+    <div>
+      <div class="fc-title">Legal & Privacy</div>
+      <a href="#" class="fc-link">Privacy Policy</a><a href="#" class="fc-link">DPDP Compliance</a><a href="#" class="fc-link">Data Principal Rights</a><a href="#" class="fc-link">Terms & Conditions</a><a href="#" class="fc-link">Grievance Redressal</a>
+    </div>
+  </div>
+  <hr class="footer-divider">
+  <div class="footer-bottom">
+    <span>© 2026 BharatFinance Services Pvt. Ltd. All rights reserved. Loans subject to credit approval. T&C apply.</span>
+    <div class="comp-badges"><span class="comp-badge">RBI</span><span class="comp-badge">DPDP</span><span class="comp-badge">GDPR</span><span class="comp-badge">ISO 27001</span><span class="comp-badge">ENCRYPT CMP</span></div>
+  </div>
+</footer>
+
+<script src="encrypt-cmp.js" data-org="BharatFinance" data-lang="en"></script>
+
+<script>
+  /* ── EMI CALCULATOR ── */
+  function calcEMI() {
+    const P = parseInt(document.getElementById("loanAmt").value);
+    const r = parseFloat(document.getElementById("loanType").value) / 12 / 100;
+    const n = parseInt(document.getElementById("tenure").value);
+    const emi   = Math.round(P * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1));
+    const total = emi * n;
+    const intr  = total - P;
+    const pct   = ((P - 10000) / (5000000 - 10000)) * 100;
+    document.getElementById("loanAmt").style.background =
+      `linear-gradient(to right, #6c4fc4 0%, #6c4fc4 ${pct}%, #e0d9f5 ${pct}%, #e0d9f5 100%)`;
+    document.getElementById("amtDisplay").textContent = "\u20b9" + P.toLocaleString("en-IN");
+    document.getElementById("emiVal").textContent   = "\u20b9" + emi.toLocaleString("en-IN");
+    document.getElementById("totalVal").textContent = "\u20b9" + total.toLocaleString("en-IN");
+    document.getElementById("intVal").textContent   = "\u20b9" + intr.toLocaleString("en-IN");
+  }
+  calcEMI();
+
+  /* ── CONSENT GRID ── */
+  const purposeDefs = [
+    { id:"necessary",           label:"Necessary",       locked:true  },
+    { id:"analytics",           label:"Analytics",       locked:false },
+    { id:"marketing",           label:"Marketing",       locked:false },
+    { id:"personalization",     label:"Personalisation", locked:false },
+    { id:"third_party_sharing", label:"3rd Party",       locked:false },
+  ];
+
+  function refreshConsent() {
+    if (!window.EncryptCMP) return;
+    const c = window.EncryptCMP.getConsent();
+    const g = document.getElementById("consentGrid");
+    g.innerHTML = purposeDefs.map(p => {
+      const granted = !!c[p.id];
+      if (p.locked) {
+        return `<div class="cpill on">
+          <div class="cpill-name">${p.label}</div>
+          <div class="cpill-status">\u2705 Granted</div>
+          <div class="cpill-locked">Always required</div>
+        </div>`;
+      }
+      return `<div class="cpill ${granted ? 'on' : 'off'}">
+        <div class="cpill-name">${p.label}</div>
+        <div class="cpill-status">${granted ? '\u2705 Granted' : '\u274c Denied'}</div>
+        <button class="cpill-revoke" onclick="revokeOne('${p.id}')" ${!granted ? 'disabled' : ''}>
+          ${granted ? 'Revoke' : 'Not active'}
+        </button>
+      </div>`;
+    }).join("");
+  }
+
+  function revokeOne(purpose) {
+    if (!window.EncryptCMP) return;
+    window.EncryptCMP.revokeConsent(purpose);
+    setTimeout(refreshConsent, 300);
+  }
+
+  function revokeAll() {
+    if (!window.EncryptCMP) return;
+    if (!confirm("Are you sure you want to revoke all non-essential consents?")) return;
+    window.EncryptCMP.revokeAll();
+    setTimeout(refreshConsent, 300);
+  }
+
+  /* ── RECEIPT MODAL ── */
+  let lastReceiptData = null;
+
+  function showReceipt() {
+    if (!window.EncryptCMP) return;
+    const r = window.EncryptCMP.getReceipt();
+    if (!r) {
+      alert("No consent receipt yet — please accept consent first using the banner.");
+      return;
+    }
+    lastReceiptData = r;
+
+    document.getElementById("receiptIdDisplay").textContent =
+      "Receipt ID: " + (r.receipt_id || "—").slice(0,16) + "...";
+    document.getElementById("receiptDeviceId").textContent =
+      (r.device_id || "—").slice(0,18) + "...";
+    document.getElementById("receiptTimestamp").textContent =
+      r.timestamp ? new Date(r.timestamp).toLocaleString("en-IN", {dateStyle:"medium",timeStyle:"short"}) : "—";
+    document.getElementById("receiptExpiry").textContent =
+      r.expires_at ? new Date(r.expires_at).toLocaleString("en-IN", {dateStyle:"medium",timeStyle:"short"}) : "—";
+    document.getElementById("receiptModel").textContent =
+      r.consent_model === "dpdp" ? "DPDP Act 2023 (India)" : "GDPR 2018 (EU)";
+
+    const purposeNames = {
+      necessary:"Necessary", analytics:"Analytics",
+      marketing:"Marketing", personalization:"Personalisation",
+      third_party_sharing:"Third-party Sharing"
+    };
+    const purposesEl = document.getElementById("receiptPurposes");
+    purposesEl.innerHTML = Object.entries(r.purposes || {}).map(([k,v]) =>
+      `<div class="receipt-purpose-row ${v?'granted':'denied'}">
+        <div class="receipt-purpose-name">${purposeNames[k]||k}</div>
+        <div class="receipt-purpose-status">${v ? '\u2705 Granted' : '\u274c Denied'}</div>
+      </div>`
+    ).join("");
+
+    document.getElementById("receiptModal").classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeReceipt() {
+    document.getElementById("receiptModal").classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  function downloadReceipt() {
+    if (!lastReceiptData) return;
+    const blob = new Blob([JSON.stringify(lastReceiptData, null, 2)], {type:"application/json"});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
+    a.download = `consent-receipt-${(lastReceiptData.receipt_id||"").slice(0,8)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /* ── CMP EVENT LISTENERS ── */
+  window.addEventListener("encrypt-cmp:ready",  refreshConsent);
+  window.addEventListener("encrypt-cmp:accept", refreshConsent);
+  window.addEventListener("encrypt-cmp:reject", refreshConsent);
+  window.addEventListener("encrypt-cmp:save",   refreshConsent);
+  window.addEventListener("encrypt-cmp:revoke", refreshConsent);
+  setTimeout(refreshConsent, 800);
+</script>
+</body>
+</html>
