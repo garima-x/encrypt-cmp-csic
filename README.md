@@ -45,6 +45,9 @@ ENCRYPT CMP is a lightweight, drop-in **Consent Management Platform (CMP)** buil
 
 ---
 ## Quick Start
+
+Add a single script tag to your website:
+
 ```html
 <script
   src="./encrypt-cmp.js"
@@ -61,6 +64,7 @@ ENCRYPT CMP is a lightweight, drop-in **Consent Management Platform (CMP)** buil
 </script>
 
 ---
+
 
 ## Why ENCRYPT CMP
 
