@@ -10,6 +10,17 @@
 
 ---
 
+## Live Demo Links
+
+| Demo | Description | URL |
+|------|-------------|-----|
+| Main SDK | Product landing page with interactive demo | [encrypt-cmp-csic-final.vercel.app](https://encrypt-cmp-csic-final.vercel.app) |
+| BharatFinance | Digital lending platform demo | [encrypt-cmp-csic-final.vercel.app/bharatfinance.html](https://encrypt-cmp-csic-final.vercel.app/bharatfinance.html) |
+| SurakshaSetu | Government FIR filing portal demo | [encrypt-cmp-csic-final.vercel.app/suraksha-setu.html](https://encrypt-cmp-csic-final.vercel.app/suraksha-setu.html) |
+| Admin Portal | DPO dashboard for consent management | [encrypt-cmp-csic-final.vercel.app/admin.html](https://encrypt-cmp-csic-final.vercel.app/admin.html) |
+
+---
+
 ## Overview
 
 ENCRYPT CMP is a lightweight, drop-in **Consent Management Platform (CMP)** built specifically for India's **Digital Personal Data Protection Act (DPDP Act, 2023)**. It enables digital services to collect, manage, and audit user consent in a compliant, verifiable, and user-friendly manner — without requiring complex setup, build tools, or external dependencies.
@@ -18,6 +29,7 @@ ENCRYPT CMP is a lightweight, drop-in **Consent Management Platform (CMP)** buil
 
 ## Table of Contents
 
+- [Live Demo Links](#live-demo-links)
 - [Quick Start](#quick-start)
 - [Why ENCRYPT CMP](#why-encrypt-cmp)
 - [Core Features](#core-features)
@@ -41,8 +53,6 @@ Add a single script tag to your website:
   data-org="YourOrg"
   data-lang="en">
 </script>
-```
-
 **With backend integration (optional):**
 
 ```html
