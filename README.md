@@ -93,7 +93,7 @@ Dynamic risk scoring (0–100) based on enabled purposes, helping users make inf
 ### 5. Multilingual Support
 
 Supported languages:
-`en`, `hi`, `te`, `ta`, `kn`, `ml`
+`english`, `hindi`, `telugu`, `tamil`, `kannada`, `malayalam`
 
 ---
 
