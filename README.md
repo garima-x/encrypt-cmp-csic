@@ -19,6 +19,7 @@
 * [Quick Start](#quick-start)
 * [Core Features](#core-features)
 * [Why Blockchain Anchoring](#why-blockchain-anchoring)
+* [Smart Contract](#smart-contract)
 * [Architecture Overview](#architecture-overview)
 * [Repository Structure](#repository-structure)
 * [Demo Applications](#demo-applications)
@@ -181,6 +182,9 @@ ENCRYPT CMP anchors a **hash of each consent receipt** on Ethereum (Sepolia), ma
 No personal data is stored on-chain.
 
 ---
+## Smart Contract
+
+ENCRYPT CMP uses a Solidity smart contract (`ConsentVault.sol`) deployed on Ethereum (Sepolia) to anchor consent records. Instead of storing raw data, the system stores a `keccak256` hash of each consent receipt along with its status and timestamp. This enables tamper-evident audit logs, on-chain verification of consent (`verifyConsentHash`), and full history tracking (`getConsentHistory`) without exposing any personal data.
 
 ## Architecture Overview
 
@@ -199,13 +203,15 @@ No personal data is stored on-chain.
 
 ```
 encrypt-cmp-csic/
-├── LICENSE
+├── index.html              ← Main CMP demo
+├── admin.html              ← Admin portal
+├── bharatfinance.html      ← NBFC demo
+├── suraksha-setu.html      ← Govt FIR portal
+├── encrypt-cmp.js          ← SDK (795 lines, 0 deps)
+├── contracts/
+│   └── ConsentVault.sol    ← Deployed on Sepolia testnet
 ├── README.md
-├── encrypt-cmp.js
-├── index.html
-├── bharatfinance.html
-├── suraksha-setu.html
-└── admin.html
+└── LICENSE
 ```
 
 ---
