@@ -43,27 +43,6 @@ ENCRYPT CMP is a lightweight, drop-in **Consent Management Platform (CMP)** buil
 | SurakshaSetu | Government FIR filing portal demo | [encrypt-cmp-csic-final.vercel.app/suraksha-setu.html](https://encrypt-cmp-csic-final.vercel.app/suraksha-setu.html) |
 | Admin Portal | DPO dashboard for consent management | [encrypt-cmp-csic-final.vercel.app/admin.html](https://encrypt-cmp-csic-final.vercel.app/admin.html) |
 
----
-## Quick Start
-
-Add a single script tag to your website:
-
-```html
-<script
-  src="./encrypt-cmp.js"
-  data-org="YourOrg"
-  data-lang="en">
-</script>
-<script
-  src="./encrypt-cmp.js"
-  data-org="YourOrg"
-  data-lang="en"
-  data-supabase-url="https://your-project.supabase.co"
-  data-supabase-key="your-anon-key"
-  data-policy-version="1.0.0">
-</script>
-
----
 
 
 ## Why ENCRYPT CMP
