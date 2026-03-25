@@ -16,6 +16,8 @@
 * [Problem Statement](#problem-statement)
 * [Why ENCRYPT CMP](#why-encrypt-cmp)
 * [Live Demo Links](#live-demo-links)
+* [How to Use](#how-to-use)
+* [Benchmarking](#benchmarking)
 * [Quick Start](#quick-start)
 * [Core Features](#core-features)
 * [Why Blockchain Anchoring](#why-blockchain-anchoring)
@@ -82,7 +84,100 @@ Indian startups, fintech platforms, and government systems lack a **simple, comp
 | Admin Portal  | DPO dashboard                      | https://encrypt-cmp-csic-final.vercel.app/admin.html         |
 
 ---
+## How to Use
 
+### User Flow
+
+1. Open any demo (BharatFinance / SurakshaSetu)
+2. CMP banner appears automatically
+3. Choose:
+   - Accept All
+   - Reject All
+   - Customize consent
+4. Consent is applied instantly
+5. A receipt is generated and stored
+6. Receipt hash is anchored on blockchain (Sepolia)
+
+---
+
+### Admin Panel
+
+Access: `/admin.html`
+
+- **Purposes** → Configure consent categories  
+- **Consent Logs** → View user consents  
+- **Receipts** → Inspect consent records  
+- **Audit Logs** → Track system events  
+- **Benchmarks** → Measure system performance  
+
+---
+
+### Verification
+
+- Open **Receipts**
+- Copy receipt hash
+- Verify on Ethereum Sepolia
+- Matching hash confirms integrity
+## Benchmarking
+
+ENCRYPT CMP includes a built-in performance benchmarking suite inside the Admin Panel.
+
+---
+
+### Running Benchmarks
+
+1. Go to **Admin → Benchmarks**
+2. Click **Re-run**
+3. System executes tests automatically
+4. Live logs are displayed
+5. Results appear in charts and tables
+
+---
+
+### What is Measured
+
+- Consent Save (database write)
+- Audit Log Write
+- Receipt Generation
+- Consent Revoke
+- SDK Load Time
+- keccak256 Hash Time
+- Blockchain RPC Call (Sepolia)
+
+---
+
+### Execution Method
+
+- Each operation runs **100 iterations**
+- Latency recorded for each run
+- Percentiles calculated:
+  - **P50** → median performance  
+  - **P95** → high load  
+  - **P99** → worst case  
+
+---
+
+### Phases
+
+- Core Ops → Save, Revoke, Receipt, Audit  
+- SDK → Script load + initialization  
+- Crypto → keccak256 hashing  
+- Blockchain → RPC call  
+- Render → UI processing  
+
+---
+
+### Interpretation
+
+- Lower P50 = better performance  
+- P95/P99 = stability under stress  
+- PASS = acceptable latency  
+- FAST = optimized  
+
+Example:
+- SDK Load ~18ms  
+- Consent Save ~79ms  
+- Blockchain ~520ms (network-bound)
 ## Quick Start
 
 ### Basic Integration
