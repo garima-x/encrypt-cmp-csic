@@ -155,11 +155,10 @@ encrypt-cmp-csic/
 │
 ├── encrypt-cmp.js          # Core SDK
 ├── index.html              # Product page
-├── suraksha-setu.html      # Legacy demo
 │
 ├── demo/
 │   ├── bharatfinance/      # Fintech demo
-│   └── suraksha-setu/      # Government demo
+│   └── suraksha-setu/      # Legal application demo
 │
 └── admin/
     └── index.html          # Admin dashboard
