@@ -169,22 +169,31 @@ encrypt-cmp-csic/
 
 ## Demo Applications
 
-### BharatFinance (Fintech)
+### BharatFinance (Digital Lending)
 
-Simulates an RBI-regulated lending platform with:
+Simulates a digital loan lending platform (NBFC-style use case) where consent is critical before processing sensitive financial data.
 
-* EMI calculator
-* Loan products
-* DPDP-compliant privacy notice
-* Live consent dashboard
+Key aspects:
 
-### SurakshaSetu (Government)
+* Consent before collecting financial data (PAN, Aadhaar, bank statements, etc.)
+* Purpose-based permissions for credit scoring, analytics, and third-party sharing
+* Real-time consent dashboard integrated with the SDK
+* Demonstrates compliance in high-risk financial data environments
 
-Demonstrates consent flows in public-sector systems and data-sharing contexts.
+### SurakshaSetu (FIR Filing System)
+
+Represents a citizen-facing police platform for filing FIRs (First Information Reports).
+
+Key aspects:
+
+* Consent collection before submitting personal and sensitive complaint data
+* Clear disclosure of how data is used across departments
+* Demonstrates DPDP compliance in public-sector workflows
+* Highlights consent handling in sensitive legal and identity-related submissions
 
 ---
 
-## Admin Dashboard
+#
 
 Provides:
 
