@@ -434,6 +434,8 @@ MIT License — see LICENSE file
 ---
 
 ## Disclaimer
+Same SDK integrated across multiple independent applications 
+(BharatFinance – fintech, SurakshaSetu – gov portal), demonstrating interoperability.
 
 **BharatFinance** and **SurakshaSetu** are fictional demos.
 All references are illustrative only.
