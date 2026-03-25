@@ -45,18 +45,12 @@ ENCRYPT CMP is a lightweight, drop-in **Consent Management Platform (CMP)** buil
 
 ---
 ## Quick Start
-
-Add a single script tag to your website:
-
 ```html
 <script
   src="./encrypt-cmp.js"
   data-org="YourOrg"
   data-lang="en">
 </script>
-**With backend integration (optional):**
-
-```html
 <script
   src="./encrypt-cmp.js"
   data-org="YourOrg"
@@ -65,7 +59,6 @@ Add a single script tag to your website:
   data-supabase-key="your-anon-key"
   data-policy-version="1.0.0">
 </script>
-```
 
 ---
 
