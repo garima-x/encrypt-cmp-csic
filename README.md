@@ -8,18 +8,7 @@
 [![DPDP Compliant](https://img.shields.io/badge/DPDP-Compliant-orange.svg)](#dpdp-compliance-coverage)
 [![GDPR Ready](https://img.shields.io/badge/GDPR-Ready-blue.svg)](#dpdp-compliance-coverage)
 
----
 
-## Live Demo Links
-
-| Demo | Description | URL |
-|------|-------------|-----|
-| Main SDK | Product landing page with interactive demo | [encrypt-cmp-csic-final.vercel.app](https://encrypt-cmp-csic-final.vercel.app) |
-| BharatFinance | Digital lending platform demo | [encrypt-cmp-csic-final.vercel.app/bharatfinance.html](https://encrypt-cmp-csic-final.vercel.app/bharatfinance.html) |
-| SurakshaSetu | Government FIR filing portal demo | [encrypt-cmp-csic-final.vercel.app/suraksha-setu.html](https://encrypt-cmp-csic-final.vercel.app/suraksha-setu.html) |
-| Admin Portal | DPO dashboard for consent management | [encrypt-cmp-csic-final.vercel.app/admin.html](https://encrypt-cmp-csic-final.vercel.app/admin.html) |
-
----
 
 ## Overview
 
@@ -43,6 +32,18 @@ ENCRYPT CMP is a lightweight, drop-in **Consent Management Platform (CMP)** buil
 
 ---
 
+---
+
+## Live Demo Links
+
+| Demo | Description | URL |
+|------|-------------|-----|
+| Main SDK | Product landing page with interactive demo | [encrypt-cmp-csic-final.vercel.app](https://encrypt-cmp-csic-final.vercel.app) |
+| BharatFinance | Digital lending platform demo | [encrypt-cmp-csic-final.vercel.app/bharatfinance.html](https://encrypt-cmp-csic-final.vercel.app/bharatfinance.html) |
+| SurakshaSetu | Government FIR filing portal demo | [encrypt-cmp-csic-final.vercel.app/suraksha-setu.html](https://encrypt-cmp-csic-final.vercel.app/suraksha-setu.html) |
+| Admin Portal | DPO dashboard for consent management | [encrypt-cmp-csic-final.vercel.app/admin.html](https://encrypt-cmp-csic-final.vercel.app/admin.html) |
+
+---
 ## Quick Start
 
 Add a single script tag to your website:
