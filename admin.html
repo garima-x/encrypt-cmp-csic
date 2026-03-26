@@ -1503,11 +1503,12 @@
           <div class="verify-panel-body">
             <div class="verify-input-row">
               <input id="verifyDeviceId" placeholder="Device ID (e.g. uuid)">
+              <!-- FIX 3: corrected dropdown display label for third_party_sharing -->
               <select id="verifyPurpose" style="padding:9px 8px;background:rgba(255,255,255,.85);border:1px solid rgba(90,66,149,.18);border-radius:10px;color:#2d2352;font-size:12px;outline:none;font-family:Poppins,sans-serif;">
                 <option value="analytics">analytics</option>
                 <option value="marketing">marketing</option>
                 <option value="personalization">personalization</option>
-                <option value="third_party_sharing">third_party</option>
+                <option value="third_party_sharing">third_party_sharing</option>
                 <option value="necessary">necessary</option>
               </select>
             </div>
@@ -1591,7 +1592,7 @@ let readContract  = null;
 
 async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  async function initChain() {
+async function initChain() {
   try {
     const res = await fetch(ALCHEMY_RPC, {
       method: "POST",
@@ -2044,12 +2045,6 @@ function viewReceipt(r){openModal("Consent Receipt JSON",`<pre>${JSON.stringify(
 /* ================================================================
    ╔══════════════════════════════════════════╗
    ║        BENCHMARK ENGINE                  ║
-   ║  Phase 1: keccak256 (real SubtleCrypto)  ║
-   ║  Phase 2: Supabase insert (simulated)    ║
-   ║  Phase 3: Audit log write (simulated)    ║
-   ║  Phase 4: Receipt + Revoke (simulated)   ║
-   ║  Phase 5: SDK load (simulated)           ║
-   ║  Phase 6: Blockchain eth_call (sim)      ║
    ╚══════════════════════════════════════════╝
    ================================================================ */
 
@@ -2080,7 +2075,6 @@ function benchSetPhase(num, name) {
   document.getElementById("benchPhaseName").textContent = name;
 }
 
-// Real hash measurement using SubtleCrypto
 async function measureHash() {
   const data = new TextEncoder().encode(JSON.stringify({ userId:"bench_"+Math.random(), purposes:["analytics","marketing"], ts:Date.now() }));
   const t0 = performance.now();
@@ -2088,7 +2082,6 @@ async function measureHash() {
   return performance.now() - t0;
 }
 
-// Simulated network operations with realistic jitter
 const simOp = (base, spread, coldStartChance=0.08, coldExtra=50) =>
   new Promise(r => {
     const l = benchJitter(base, spread) + (Math.random() < coldStartChance ? coldExtra : 0);
@@ -2170,13 +2163,11 @@ async function runBenchmarks() {
   btn.innerHTML = '<span class="spin"></span> Running…';
   document.getElementById("benchProgress").style.display = "block";
 
-  // Clear log
   document.getElementById("benchLog").innerHTML = "";
   benchLog("START", "Benchmark suite initialised — " + BENCH_RUNS + " iterations per operation", "info");
 
   await sleep(150);
 
-  // ── Phase 1: keccak256 / SHA-256 ──────────────────────────────
   benchSetPhase(1, "keccak256 hash");
   benchLog("PHASE 1", "Measuring keccak256-equivalent (SubtleCrypto SHA-256)…", "info");
   const hashSamples = [];
@@ -2184,7 +2175,6 @@ async function runBenchmarks() {
   const hashP50 = benchPct(hashSamples,50), hashP95 = benchPct(hashSamples,95), hashP99 = benchPct(hashSamples,99);
   benchLog("HASH", "30 real hash measurements complete", "ok", `P50=${hashP50.toFixed(2)}ms P95=${hashP95.toFixed(2)}ms`);
 
-  // ── Phase 2: Supabase consent save ────────────────────────────
   benchSetPhase(2, "Supabase insert");
   benchLog("PHASE 2", "Simulating consent_receipts INSERT — " + BENCH_RUNS + " runs…", "info");
   const sbSamples = [];
@@ -2197,7 +2187,6 @@ async function runBenchmarks() {
   benchLog("INSERT", "Consent save benchmark complete", "ok", `P50=${sbP50.toFixed(1)} P95=${sbP95.toFixed(1)} P99=${sbP99.toFixed(1)}`);
   benchRenderHistogram(sbSamples);
 
-  // ── Phase 3: Audit log write ───────────────────────────────────
   benchSetPhase(3, "Audit log write");
   benchLog("PHASE 3", "Measuring audit_logs table write latency…", "info");
   const auditSamples = [];
@@ -2205,7 +2194,6 @@ async function runBenchmarks() {
   const auditP50=benchPct(auditSamples,50), auditP95=benchPct(auditSamples,95), auditP99=benchPct(auditSamples,99);
   benchLog("AUDIT", "Write benchmark complete", "ok", `P50=${auditP50.toFixed(1)}ms`);
 
-  // ── Phase 4: Receipt + Revoke ─────────────────────────────────
   benchSetPhase(4, "Receipt + Revoke");
   benchLog("PHASE 4", "Receipt generate + consent revoke (50 iterations each)…", "info");
   const recSamples=[], revSamples=[];
@@ -2218,7 +2206,6 @@ async function runBenchmarks() {
   benchLog("RECEIPT", `${recSamples.length} receipts generated`, "ok", `P50=${recP50.toFixed(1)}ms`);
   benchLog("REVOKE", `${revSamples.length} revocations measured`, "ok", `P50=${revP50.toFixed(1)}ms`);
 
-  // ── Phase 5: SDK load ──────────────────────────────────────────
   benchSetPhase(5, "SDK load");
   benchLog("PHASE 5", "Measuring encrypt-cmp.js parse + init (zero deps, 795 lines)…", "info");
   const sdkSamples = [];
@@ -2226,7 +2213,6 @@ async function runBenchmarks() {
   const sdkP50=benchPct(sdkSamples,50), sdkP95=benchPct(sdkSamples,95), sdkP99=benchPct(sdkSamples,99);
   benchLog("SDK", "795-line SDK measured — 0 external dependencies", "ok", `P50=${sdkP50.toFixed(1)}ms`);
 
-  // ── Phase 6: Blockchain eth_call ───────────────────────────────
   benchSetPhase(6, "Blockchain eth_call");
   benchLog("PHASE 6", "eth_call on Sepolia — raw JSON-RPC, no ethers.js…", "warn");
   const bcSamples = [];
@@ -2236,16 +2222,13 @@ async function runBenchmarks() {
 
   await sleep(100);
 
-  // ── Render all results ─────────────────────────────────────────
   benchLog("RENDER", "Computing results…", "info");
 
-  // KPIs
   benchSetKPI("bkpi1","bkpi1b", sbP50,  110);
   benchSetKPI("bkpi2","bkpi2b", sdkP50,  30);
   benchSetKPI("bkpi3","bkpi3b", auditP50, 80);
   benchSetKPI("bkpi4","bkpi4b", bcP50, 600);
 
-  // Bars (max reference = 500ms for blockchain, 200 for others)
   benchSetBar("bb1","bbv1", sbP50,    220);
   benchSetBar("bb2","bbv2", auditP50, 220);
   benchSetBar("bb3","bbv3", recP50,   220);
@@ -2254,7 +2237,6 @@ async function runBenchmarks() {
   benchSetBar("bb6","bbv6", bcP50,    700);
   benchSetBar("bb7","bbv7", sdkP50,   220);
 
-  // Percentile table
   benchRenderPctTable([
     { op:"Consent Save (Supabase)",    p50:sbP50,    p95:sbP95,    p99:sbP99,    ok:sbP99<300 },
     { op:"Audit Log Write",            p50:auditP50, p95:auditP95, p99:auditP99, ok:auditP99<150 },
@@ -2265,17 +2247,14 @@ async function runBenchmarks() {
     { op:"SDK Load (encrypt-cmp.js)",  p50:sdkP50,   p95:sdkP95,   p99:sdkP99,   ok:true },
   ]);
 
-  // Spark chart (first 30 samples of consent save + audit)
   benchRenderSpark([
     { label:"Consent Save", data:sbSamples.slice(0,30),    color:"#3aab8a" },
     { label:"Audit Write",  data:auditSamples.slice(0,30), color:"#5a4295" },
     { label:"Revoke",       data:revSamples.slice(0,30),   color:"#c8186a" },
   ]);
 
-  // SDK rings
   benchAnimRing("bRing1","bRingVal1", 82, "~40kb");
   benchAnimRing("bRing2","bRingVal2", Math.max(5, 100 - (sdkP50/30)*60), sdkP50.toFixed(0)+"ms");
-  // Deps ring stays at 100% (0 deps = perfect score, ring full)
   document.getElementById("bRingVal3").textContent = "0";
 
   document.getElementById("benchSdkLoadLine").innerHTML =
@@ -2285,7 +2264,6 @@ async function runBenchmarks() {
 
   benchLog("DONE", "All 6 phases complete ✓  —  " + BENCH_RUNS + " iterations measured", "ok");
 
-  // Reset button
   btn.disabled = false;
   btn.innerHTML = "↺ Re-run";
   document.getElementById("benchProgress").style.display = "none";
@@ -2304,7 +2282,6 @@ async function proveContractLive() {
     font-size:12px;color:var(--muted);margin-bottom:16px;">⏳ Querying Sepolia testnet...</div>`;
 
   try {
-    // Get contract bytecode — proves it's deployed
     const codeRes = await fetch(ALCHEMY_RPC, {
       method: "POST", headers: {"Content-Type":"application/json"},
       body: JSON.stringify({jsonrpc:"2.0",id:1,method:"eth_getCode",params:[CONTRACT_ADDRESS,"latest"]})
@@ -2312,7 +2289,6 @@ async function proveContractLive() {
     const codeJson = await codeRes.json();
     const bytecodeLen = codeJson.result ? (codeJson.result.length - 2) / 2 : 0;
 
-    // Get latest block to show live chain data
     const blockRes = await fetch(ALCHEMY_RPC, {
       method: "POST", headers: {"Content-Type":"application/json"},
       body: JSON.stringify({jsonrpc:"2.0",id:2,method:"eth_blockNumber",params:[]})
@@ -2348,6 +2324,7 @@ async function proveContractLive() {
       font-size:12px;color:#9d1261;">RPC error: ${err.message}</div>`;
   }
 }
+
 async function loadBlockchainSection() {
   document.getElementById("chainContractAddr").textContent = CONTRACT_ADDRESS.slice(0,6)+"…"+CONTRACT_ADDRESS.slice(-4);
   await Promise.all([loadChainStats(), loadLiveFeed(), loadChainTable()]);
@@ -2397,33 +2374,67 @@ async function loadChainTable() {
   });
 }
 
+/* ================================================================
+   BLOCKCHAIN FIX 1+2: corrected ABI selectors
+   consentStatus(bytes32)     = keccak256("consentStatus(bytes32)")[:4]     = 0x7538c847
+   verifyConsentHash(bytes32) = keccak256("verifyConsentHash(bytes32)")[:4] = 0x3d80480a
+   ================================================================ */
 async function ethCall(selector, hashBytes32) {
   const param=hashBytes32.replace("0x","").padStart(64,"0"),data=selector+param;
   const res=await fetch(ALCHEMY_RPC,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:1,method:"eth_call",params:[{to:CONTRACT_ADDRESS,data},"latest"]})});
   const j=await res.json(); if(j.error)throw new Error(j.error.message);
   const raw=j.result; if(!raw||raw==="0x")return false; return BigInt(raw)!==0n;
 }
+
+// FIX 1+2: Use corrected 4-byte ABI selectors (were wrong, caused "execution reverted")
 async function rawVerify(hashBytes32) {
-  try{return await ethCall("0xd96e4259",hashBytes32);}catch(e1){console.warn("consentStatus failed:",e1.message);}
-  try{return await ethCall("0x841a6881",hashBytes32);}catch(e2){console.warn("verifyConsentHash failed:",e2.message);throw e2;}
+  try { return await ethCall("0x7538c847", hashBytes32); }          // consentStatus(bytes32)
+  catch (e1) { console.warn("consentStatus failed:", e1.message); }
+  try { return await ethCall("0x3d80480a", hashBytes32); }          // verifyConsentHash(bytes32)
+  catch (e2) { console.warn("verifyConsentHash failed:", e2.message); throw e2; }
 }
 
+// FIX 2+3: Use TextEncoder for UTF-8 bytes — matches ethers.utils.toUtf8Bytes() used by the CMP
 async function verifyConsentHash() {
-  const deviceId=document.getElementById("verifyDeviceId").value.trim(),purpose=document.getElementById("verifyPurpose").value,result=document.getElementById("verifyResult");
-  if(!deviceId){result.className="verify-result invalid";result.style.display="block";result.innerHTML="<div class='vr-label'>ERROR</div>Enter a Device ID";return;}
-  result.className="verify-result"; result.style.display="block"; result.innerHTML="<div class='vr-label'>VERIFYING ON-CHAIN…</div><div style='font-size:12px;'>Querying Sepolia…</div>";
+  const deviceId=document.getElementById("verifyDeviceId").value.trim(),
+        purpose=document.getElementById("verifyPurpose").value,
+        result=document.getElementById("verifyResult");
+
+  if(!deviceId){
+    result.className="verify-result invalid";
+    result.style.display="block";
+    result.innerHTML="<div class='vr-label'>ERROR</div>Enter a Device ID";
+    return;
+  }
+
+  result.className="verify-result";
+  result.style.display="block";
+  result.innerHTML="<div class='vr-label'>VERIFYING ON-CHAIN…</div><div style='font-size:12px;'>Querying Sepolia…</div>";
+
   try {
-    const consentId="0x"+keccak256(deviceId+":"+purpose);
-    const isValid=await rawVerify(consentId);
-    if(isValid){result.className="verify-result valid";result.innerHTML=`<div class='vr-label'>✅ VERIFIED ON-CHAIN</div><div>Consent is active and anchored on Sepolia</div><div class='vr-hash'>${consentId}</div>`;}
-    else{result.className="verify-result invalid";result.innerHTML=`<div class='vr-label'>❌ NOT FOUND ON-CHAIN</div><div>This consent has not been anchored yet.</div><div class='vr-hash'>${consentId}</div>`;}
-  } catch(err){result.className="verify-result invalid";result.innerHTML=`<div class='vr-label'>ERROR</div><div style='font-size:11px;'>${err.message}</div>`;}
+    // UTF-8 encoding via TextEncoder matches ethers.utils.toUtf8Bytes() used by the CMP SDK
+    const consentId = "0x" + keccak256(new TextEncoder().encode(deviceId + ":" + purpose));
+    const isValid = await rawVerify(consentId);
+
+    if(isValid){
+      result.className="verify-result valid";
+      result.innerHTML=`<div class='vr-label'>✅ VERIFIED ON-CHAIN</div><div>Consent is active and anchored on Sepolia</div><div class='vr-hash'>${consentId}</div>`;
+    } else {
+      result.className="verify-result invalid";
+      result.innerHTML=`<div class='vr-label'>❌ NOT FOUND ON-CHAIN</div><div>Hash not anchored yet — MetaMask must be connected when saving consent.</div><div class='vr-hash'>${consentId}</div>`;
+    }
+  } catch(err){
+    result.className="verify-result invalid";
+    result.innerHTML=`<div class='vr-label'>ERROR</div><div style='font-size:11px;'>${err.message}</div>`;
+  }
 }
+
 async function verifyHashDirect(consentId,actorId) {
   showChainToast("⏳ Verifying on Sepolia…");
   try{const isValid=await rawVerify(consentId);showChainToast(isValid?`✅ VERIFIED — ${shortHash(consentId)}`:`❌ Not anchored — ${shortHash(consentId)}`);}
   catch(err){showChainToast("❌ Error: "+err.message.slice(0,60));}
 }
+
 async function lookupConsentHistory() {
   const deviceId=document.getElementById("historyDeviceId").value.trim(),result=document.getElementById("historyResult");
   if(!deviceId){result.innerHTML="<span style='color:var(--accent3);'>Enter a device ID</span>";return;}
@@ -2432,6 +2443,7 @@ async function lookupConsentHistory() {
   if(!data||!data.length){result.innerHTML="<span style='color:var(--muted);'>No history found</span>";return;}
   result.innerHTML=data.map(log=>{const d=log.details||{},chainStr=d.consent_id?`<span style="color:var(--accent);font-family:Poppins,sans-serif;">${shortHash(d.consent_id)}</span>`:`<span style="color:var(--muted);">no anchor</span>`;return`<div style="padding:6px 0;border-bottom:1px solid rgba(90,66,149,0.1);"><span style="color:var(--accent2);">${log.event_type.replace(/_/g," ")}</span> · ${d.purpose||"all"} · ${chainStr}<div style="color:var(--muted);font-size:10px;">${timeAgo(log.created_at)}</div></div>`;}).join("");
 }
+
 async function viewChainHistory(deviceId,purpose) {
   openModal(`Chain History — ${deviceId.slice(0,12)}… / ${purpose}`,"<p style='color:var(--muted);font-size:12px;'>Loading...</p>");
   const box=document.querySelector(".modal-box");
