@@ -267,6 +267,7 @@
   .delete-btn  { background: rgba(200,24,106,0.11); color: #9d1261; }
   .delete-btn:hover  { background: rgba(200,24,106,0.22); }
   .export-btn  { background: rgba(59,91,219,0.11); color: #2d4dc8; }
+  .export-btn:hover  { background: rgba(59,91,219,0.20); }
   .notify-btn  { background: rgba(245,158,11,0.11); color: #92400e; }
 
   /* ──────────── KPI CARDS ──────────── */
@@ -1054,7 +1055,7 @@
     <div class="page-sub">Immutable consent receipts with expiry tracking</div>
     <div class="table-wrap">
       <table id="receiptsTable">
-        <thead><tr><th>ID</th><th>Subject</th><th>Purposes</th><th>Created</th><th>Expires</th><th>Actions</th></tr></thead>
+        <thead><tr><th>ID</th><th>Subject</th><th>Purposes</th><th>Created</th><th>Expires</th><th>Actions</th><th>Download</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -1555,26 +1556,10 @@
 <script>
 /* ================================================================
    HASHING SAFETY WRAPPER
-   ---------------------------------------------------------------
-   js-sha3@0.9.x exposes the global as  keccak_256  (underscore).
-   The old code called  keccak256()  (no underscore) everywhere,
-   which was always undefined — silently breaking all chain ops.
-
-   We create a single safeKeccak256() that:
-     1. Tries keccak_256  (correct js-sha3 global)
-     2. Falls back to keccak256 in case a future CDN version changes
-     3. Always returns a lowercase hex string (no 0x prefix)
-   All hashing in this file goes through safeKeccak256().
    ================================================================ */
 function safeKeccak256(input) {
-  // js-sha3 accepts: string, ArrayBuffer, Uint8Array, or regular Array
-  if (typeof keccak_256 === 'function') {
-    return keccak_256(input);
-  }
-  // fallback — unlikely but safe
-  if (typeof keccak256 === 'function') {
-    return keccak256(input);
-  }
+  if (typeof keccak_256 === 'function') return keccak_256(input);
+  if (typeof keccak256  === 'function') return keccak256(input);
   throw new Error('keccak hash function not loaded — check CDN script tag');
 }
 
@@ -1607,11 +1592,7 @@ async function initChain() {
     const res = await fetch(ALCHEMY_RPC, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0", id: 1,
-        method: "eth_getCode",
-        params: [CONTRACT_ADDRESS, "latest"]
-      })
+      body: JSON.stringify({ jsonrpc:"2.0",id:1,method:"eth_getCode",params:[CONTRACT_ADDRESS,"latest"] })
     });
     const j = await res.json();
     if (j.result && j.result !== "0x") {
@@ -1619,23 +1600,13 @@ async function initChain() {
       document.querySelectorAll(".chain-dot").forEach(d => d.style.background = "#3aab8a");
       const addr = document.getElementById("chainContractAddr");
       if (addr) addr.textContent = CONTRACT_ADDRESS.slice(0,6) + "…" + CONTRACT_ADDRESS.slice(-4);
-      // Contract verified — update wallet bar but keep it visible so user can connect
       updateWalletBar("contract_ok");
     } else {
       updateWalletBar("disconnected");
     }
-  } catch(e) {
-    updateWalletBar("disconnected");
-  }
+  } catch(e) { updateWalletBar("disconnected"); }
 }
 
-/* updateWalletBar — controls the persistent wallet status bar.
-   States:
-     "contract_ok"  — contract found on Sepolia, wallet not yet connected
-     "connecting"   — MetaMask popup open
-     "connected"    — wallet connected and on Sepolia
-     "disconnected" — RPC unreachable
-*/
 function updateWalletBar(state, account) {
   const pill  = document.getElementById("chainStatusText");
   const dots  = document.querySelectorAll(".chain-dot");
@@ -1653,11 +1624,9 @@ function updateWalletBar(state, account) {
     if (title) { title.textContent = "🦊 Wallet not connected"; title.style.color = "#92400e"; }
     if (sub)   sub.textContent = "Contract is live on Sepolia. Connect MetaMask to write consent hashes on-chain.";
     if (btn)   { btn.textContent = "🦊 Connect MetaMask"; btn.disabled = false; btn.style.display = ""; }
-
   } else if (state === "connecting") {
     if (btn)   { btn.textContent = "Connecting…"; btn.disabled = true; }
     if (title) title.textContent = "Connecting to MetaMask…";
-
   } else if (state === "connected") {
     if (pill) pill.textContent = "Sepolia #11155111";
     dots.forEach(d => d.style.background = "#3aab8a");
@@ -1669,9 +1638,7 @@ function updateWalletBar(state, account) {
     if (sub)   sub.textContent = (account ? "Account: " + account.slice(0,6) + "…" + account.slice(-4) + "  · " : "") + "You can now write consent hashes on-chain.";
     if (btn)   { btn.textContent = "✓ Connected"; btn.disabled = true; btn.style.background = "#3aab8a"; }
     showChainToast("⛓ MetaMask connected — Sepolia");
-
   } else {
-    // disconnected
     if (pill) pill.textContent = "Disconnected";
     dots.forEach(d => d.style.background = "var(--accent3)");
     if (dot)   dot.style.background = "#c8186a";
@@ -1681,7 +1648,6 @@ function updateWalletBar(state, account) {
   }
 }
 
-// Keep old name as alias so any other callers don't break
 function updateChainUI(state, via) {
   if (state === "connected")    updateWalletBar("connected");
   else if (state === "connecting") updateWalletBar("connecting");
@@ -1693,8 +1659,7 @@ async function manualConnect() {
   try {
     if (!window.ethereum) {
       alert("MetaMask is not installed.\n\nInstall it from metamask.io then reload.");
-      updateWalletBar("contract_ok");
-      return;
+      updateWalletBar("contract_ok"); return;
     }
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
     const chainHex = await window.ethereum.request({ method: "eth_chainId" });
@@ -1794,7 +1759,7 @@ async function loadPurposes() {
   });
 }
 async function savePurpose() {
-  const id=document.getElementById("purposeId").value.trim(), label=document.getElementById("purposeLabel").value.trim(), desc=document.getElementById("purposeDescription").value.trim(), legal=document.getElementById("purposeLegal").value.trim()||"consent";
+  const id=document.getElementById("purposeId").value.trim(),label=document.getElementById("purposeLabel").value.trim(),desc=document.getElementById("purposeDescription").value.trim(),legal=document.getElementById("purposeLegal").value.trim()||"consent";
   if(!id||!label){alert("ID and Label required");return;}
   const{error}=await db.from("purposes_master").upsert({id,label,description:desc,legal_basis:legal});
   if(error){alert("Error: "+error.message);return;}
@@ -1937,21 +1902,23 @@ async function loadConsents() {
    ================================================================ */
 async function loadReceipts() {
   const tbody=document.querySelector("#receiptsTable tbody");
-  tbody.innerHTML="<tr><td colspan='6' style='color:var(--muted);'>Loading...</td></tr>";
+  tbody.innerHTML="<tr><td colspan='7' style='color:var(--muted);'>Loading...</td></tr>";
   const{data}=await db.from("consent_receipts").select("*").order("created_at",{ascending:false}).limit(50);
-  if(!data||data.length===0){tbody.innerHTML="<tr><td colspan='6' style='color:var(--muted);'>No receipts</td></tr>";return;}
+  if(!data||data.length===0){tbody.innerHTML="<tr><td colspan='7' style='color:var(--muted);'>No receipts</td></tr>";return;}
   tbody.innerHTML="";
   data.forEach(row=>{
     const summary=Object.keys(row.purposes||{}).join(", ");
     const isExpired=row.expires_at&&new Date(row.expires_at)<new Date();
     const diffDays=row.expires_at?Math.ceil((new Date(row.expires_at)-new Date())/(86400000)):"—";
+    const safeRow = JSON.stringify(row).replace(/'/g,"&apos;");
     const tr=document.createElement("tr");
     tr.innerHTML=`<td style="font-family:Poppins,sans-serif;font-size:10px;">${row.id}</td>
       <td style="font-size:11px;">${row.subject_id}</td><td>${summary}</td>
       <td>${formatDate(row.created_at)}</td>
       <td style="color:${isExpired?"var(--accent3)":"var(--accent2)"}">${formatDate(row.expires_at)}<br>
         <small>${typeof diffDays==="number"?(isExpired?"Expired":diffDays+" days left"):"—"}</small></td>
-      <td><button class="action-btn edit-btn" onclick='viewReceipt(${JSON.stringify(row).replace(/'/g,"&apos;")})'>JSON</button></td>`;
+      <td><button class="action-btn edit-btn" onclick='viewReceipt(${safeRow})'>📋 JSON</button></td>
+      <td><button class="action-btn export-btn" onclick='downloadReceiptJson(${safeRow})' title="Download this receipt as JSON">⬇ JSON</button></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -2324,50 +2291,23 @@ async function runBenchmarks() {
 async function proveContractLive() {
   const el = document.getElementById("proofResult");
   el.style.display = "block";
-  el.innerHTML = `<div style="padding:12px 16px;background:rgba(90,66,149,0.08);border-radius:10px;
-    font-size:12px;color:var(--muted);margin-bottom:16px;">⏳ Querying Sepolia testnet...</div>`;
-
+  el.innerHTML = `<div style="padding:12px 16px;background:rgba(90,66,149,0.08);border-radius:10px;font-size:12px;color:var(--muted);margin-bottom:16px;">⏳ Querying Sepolia testnet...</div>`;
   try {
-    const codeRes = await fetch(ALCHEMY_RPC, {
-      method: "POST", headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({jsonrpc:"2.0",id:1,method:"eth_getCode",params:[CONTRACT_ADDRESS,"latest"]})
-    });
+    const codeRes = await fetch(ALCHEMY_RPC, { method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:1,method:"eth_getCode",params:[CONTRACT_ADDRESS,"latest"]}) });
     const codeJson = await codeRes.json();
     const bytecodeLen = codeJson.result ? (codeJson.result.length - 2) / 2 : 0;
-
-    const blockRes = await fetch(ALCHEMY_RPC, {
-      method: "POST", headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({jsonrpc:"2.0",id:2,method:"eth_blockNumber",params:[]})
-    });
+    const blockRes = await fetch(ALCHEMY_RPC, { method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:2,method:"eth_blockNumber",params:[]}) });
     const blockJson = await blockRes.json();
     const blockNum = parseInt(blockJson.result, 16);
-
-    el.innerHTML = `
-      <div style="background:rgba(58,171,138,0.08);border:1px solid rgba(58,171,138,0.25);
-        border-radius:12px;padding:16px 20px;margin-bottom:16px;">
-        <div style="font-size:11px;font-weight:700;color:#1e7a5e;letter-spacing:0.08em;
-          text-transform:uppercase;margin-bottom:10px;">✅ Contract Verified On-Chain</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-          <div>
-            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;
-              letter-spacing:0.08em;margin-bottom:3px;">Network</div>
-            <div style="font-size:13px;font-weight:700;color:var(--accent);">Sepolia #11155111</div>
-          </div>
-          <div>
-            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;
-              letter-spacing:0.08em;margin-bottom:3px;">Bytecode Size</div>
-            <div style="font-size:13px;font-weight:700;color:var(--accent);">${bytecodeLen} bytes</div>
-          </div>
-          <div>
-            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;
-              letter-spacing:0.08em;margin-bottom:3px;">Latest Block</div>
-            <div style="font-size:13px;font-weight:700;color:var(--accent);">#${blockNum.toLocaleString()}</div>
-          </div>
-        </div>
-      </div>`;
+    el.innerHTML = `<div style="background:rgba(58,171,138,0.08);border:1px solid rgba(58,171,138,0.25);border-radius:12px;padding:16px 20px;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:#1e7a5e;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;">✅ Contract Verified On-Chain</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;">Network</div><div style="font-size:13px;font-weight:700;color:var(--accent);">Sepolia #11155111</div></div>
+        <div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;">Bytecode Size</div><div style="font-size:13px;font-weight:700;color:var(--accent);">${bytecodeLen} bytes</div></div>
+        <div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;">Latest Block</div><div style="font-size:13px;font-weight:700;color:var(--accent);">#${blockNum.toLocaleString()}</div></div>
+      </div></div>`;
   } catch(err) {
-    el.innerHTML = `<div style="padding:12px;background:rgba(200,24,106,0.08);border-radius:10px;
-      font-size:12px;color:#9d1261;">RPC error: ${err.message}</div>`;
+    el.innerHTML = `<div style="padding:12px;background:rgba(200,24,106,0.08);border-radius:10px;font-size:12px;color:#9d1261;">RPC error: ${err.message}</div>`;
   }
 }
 
@@ -2420,11 +2360,6 @@ async function loadChainTable() {
   });
 }
 
-/* ================================================================
-   ETH CALL — corrected 4-byte ABI selectors
-   consentStatus(bytes32)     = 0x7538c847
-   verifyConsentHash(bytes32) = 0x3d80480a
-   ================================================================ */
 async function ethCall(selector, hashBytes32) {
   const param=hashBytes32.replace("0x","").padStart(64,"0"),data=selector+param;
   const res=await fetch(ALCHEMY_RPC,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:1,method:"eth_call",params:[{to:CONTRACT_ADDRESS,data},"latest"]})});
@@ -2439,37 +2374,20 @@ async function rawVerify(hashBytes32) {
   catch (e2) { console.warn("verifyConsentHash failed:", e2.message); throw e2; }
 }
 
-/* ================================================================
-   VERIFY CONSENT HASH
-   FIX: was calling keccak256() (undefined) — now uses safeKeccak256()
-        which correctly calls keccak_256() from js-sha3.
-        Input is the plain UTF-8 string "deviceId:purpose" which
-        matches how the CMP SDK generates the on-chain consent ID.
-   ================================================================ */
 async function verifyConsentHash() {
   const deviceId=document.getElementById("verifyDeviceId").value.trim(),
         purpose=document.getElementById("verifyPurpose").value,
         result=document.getElementById("verifyResult");
-
   if(!deviceId){
-    result.className="verify-result invalid";
-    result.style.display="block";
-    result.innerHTML="<div class='vr-label'>ERROR</div>Enter a Device ID";
-    return;
+    result.className="verify-result invalid"; result.style.display="block";
+    result.innerHTML="<div class='vr-label'>ERROR</div>Enter a Device ID"; return;
   }
-
-  result.className="verify-result";
-  result.style.display="block";
+  result.className="verify-result"; result.style.display="block";
   result.innerHTML="<div class='vr-label'>VERIFYING ON-CHAIN…</div><div style='font-size:12px;'>Querying Sepolia…</div>";
-
   try {
-    // FIX: safeKeccak256 calls keccak_256() (correct js-sha3 global, was keccak256 = undefined)
-    // Pass the UTF-8 string directly — js-sha3 handles encoding internally,
-    // matching ethers.utils.toUtf8Bytes() behaviour used by the CMP SDK.
     const hashHex  = safeKeccak256(deviceId + ":" + purpose);
     const consentId = "0x" + hashHex;
     const isValid = await rawVerify(consentId);
-
     if(isValid){
       result.className="verify-result valid";
       result.innerHTML=`<div class='vr-label'>✅ VERIFIED ON-CHAIN</div><div>Consent is active and anchored on Sepolia</div><div class='vr-hash'>${consentId}</div>`;
@@ -2516,17 +2434,10 @@ async function viewChainHistory(deviceId,purpose) {
 
 /* ================================================================
    MERKLE TREE VISUALIZER
-   FIX: was calling keccak256() (undefined) — now uses safeKeccak256()
-        Input to safeKeccak256 for pair nodes is a Uint8Array of the
-        concatenated raw bytes of two 32-byte hashes, which is the
-        correct input for js-sha3 when hashing binary data.
    ================================================================ */
 function hexToBytes(hex) {
-  // Returns a Uint8Array for binary hashing (correct for Merkle pair nodes)
   const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
-  }
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
   return bytes;
 }
 
@@ -2536,26 +2447,12 @@ async function buildMerkleVisualizer() {
   const hashes=(data||[]).map(r=>r.details?.consent_id).filter(Boolean);
   if(!hashes.length){container.innerHTML="<div style='color:var(--muted);font-size:12px;text-align:center;'>No anchored hashes yet — consent with a connected wallet to populate the Merkle tree.</div>";return;}
   const leaves=hashes.slice(0,8);
-
-  // FIX: Use safeKeccak256 (was keccak256 = undefined). Pass Uint8Array for binary pair hashing.
   const level1=[];
-  for(let i=0;i<leaves.length;i+=2){
-    const a=leaves[i].replace("0x",""), b=(leaves[i+1]||leaves[i]).replace("0x","");
-    const combined=hexToBytes(a+b);
-    level1.push("0x"+safeKeccak256(combined));
-  }
+  for(let i=0;i<leaves.length;i+=2){const a=leaves[i].replace("0x",""),b=(leaves[i+1]||leaves[i]).replace("0x","");level1.push("0x"+safeKeccak256(hexToBytes(a+b)));}
   const level2=[];
-  for(let i=0;i<level1.length;i+=2){
-    const a=level1[i].replace("0x",""), b=(level1[i+1]||level1[i]).replace("0x","");
-    const combined=hexToBytes(a+b);
-    level2.push("0x"+safeKeccak256(combined));
-  }
+  for(let i=0;i<level1.length;i+=2){const a=level1[i].replace("0x",""),b=(level1[i+1]||level1[i]).replace("0x","");level2.push("0x"+safeKeccak256(hexToBytes(a+b)));}
   let root=level2[0];
-  if(level2.length>1){
-    const combined=hexToBytes(level2[0].replace("0x","")+level2[level2.length-1].replace("0x",""));
-    root="0x"+safeKeccak256(combined);
-  }
-
+  if(level2.length>1){root="0x"+safeKeccak256(hexToBytes(level2[0].replace("0x","")+level2[level2.length-1].replace("0x","")));}
   const nodeHtml=(h,cls="")=>`<span class="merkle-node ${cls}" title="${h}" onclick="copyToClipboard('${h}',event)">${shortHash(h)}</span>`;
   container.innerHTML=`<div class="merkle-tree">
     <div class="merkle-row">${nodeHtml(root,"root")}</div>
@@ -2574,6 +2471,22 @@ async function buildMerkleVisualizer() {
 
 function copyToClipboard(text,e){if(e)e.stopPropagation();navigator.clipboard.writeText(text).then(()=>showChainToast("📋 Copied: "+shortHash(text)));}
 function timeAgo(iso){if(!iso)return"—";const diff=Date.now()-new Date(iso).getTime(),s=Math.floor(diff/1000);if(s<60)return s+"s ago";const m=Math.floor(s/60);if(m<60)return m+"m ago";const h=Math.floor(m/60);if(h<24)return h+"h ago";return Math.floor(h/24)+"d ago";}
+
+/* ================================================================
+   DOWNLOAD SINGLE RECEIPT JSON
+   ================================================================ */
+function downloadReceiptJson(receipt) {
+  const blob = new Blob([JSON.stringify(receipt, null, 2)], { type: "application/json" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = "receipt-" + String(receipt.id || "unknown").slice(0, 16) + ".json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showChainToast("📥 Downloaded receipt JSON");
+}
 
 /* ================================================================
    BOOT
