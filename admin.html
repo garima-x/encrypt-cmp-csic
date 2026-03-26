@@ -1421,7 +1421,8 @@
 </div>
 <div id="proofResult" style="display:none;"></div>
 
-    <div id="chainConnectBanner" style="
+    <!-- Persistent wallet bar — always visible, state updates via updateWalletBar() -->
+    <div id="walletBar" style="
       background:rgba(245,158,11,0.10);
       border:1px solid rgba(245,158,11,0.30);
       border-radius:14px;
@@ -1432,13 +1433,14 @@
       justify-content:space-between;
       gap:16px;
     ">
-      <div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="walletDot" style="width:9px;height:9px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></div>
         <div>
-  <div style="font-weight:600;font-size:13px;color:#92400e;">⛓ Contract live on Sepolia — wallet optional</div>
-  <div style="font-size:12px;color:var(--muted);margin-top:2px;">Read-only verification works without MetaMask. Connect wallet to write consent on-chain.</div>
-</div>
+          <div id="walletBarTitle" style="font-weight:600;font-size:13px;color:#92400e;">Wallet not connected</div>
+          <div id="walletBarSub" style="font-size:12px;color:var(--muted);margin-top:2px;">Connect MetaMask to write consent hashes on-chain. Read-only verify works without a wallet.</div>
+        </div>
       </div>
-      <button onclick="manualConnect()" class="btn btn-primary" style="white-space:nowrap;flex-shrink:0;">
+      <button id="walletBarBtn" onclick="manualConnect()" class="btn btn-primary" style="white-space:nowrap;flex-shrink:0;">
         🦊 Connect MetaMask
       </button>
     </div>
@@ -1617,41 +1619,83 @@ async function initChain() {
       document.querySelectorAll(".chain-dot").forEach(d => d.style.background = "#3aab8a");
       const addr = document.getElementById("chainContractAddr");
       if (addr) addr.textContent = CONTRACT_ADDRESS.slice(0,6) + "…" + CONTRACT_ADDRESS.slice(-4);
-      const banner = document.getElementById("chainConnectBanner");
-      if (banner) banner.style.display = "none";
+      // Contract verified — update wallet bar but keep it visible so user can connect
+      updateWalletBar("contract_ok");
     } else {
-      updateChainUI("disconnected");
+      updateWalletBar("disconnected");
     }
   } catch(e) {
-    updateChainUI("disconnected");
+    updateWalletBar("disconnected");
   }
 }
 
-function updateChainUI(state, via) {
-  const pill   = document.getElementById("chainStatusText");
-  const dots   = document.querySelectorAll(".chain-dot");
-  const banner = document.getElementById("chainConnectBanner");
-  if (state === "connecting") {
-    if (pill) pill.textContent = "Connecting…";
+/* updateWalletBar — controls the persistent wallet status bar.
+   States:
+     "contract_ok"  — contract found on Sepolia, wallet not yet connected
+     "connecting"   — MetaMask popup open
+     "connected"    — wallet connected and on Sepolia
+     "disconnected" — RPC unreachable
+*/
+function updateWalletBar(state, account) {
+  const pill  = document.getElementById("chainStatusText");
+  const dots  = document.querySelectorAll(".chain-dot");
+  const bar   = document.getElementById("walletBar");
+  const dot   = document.getElementById("walletDot");
+  const title = document.getElementById("walletBarTitle");
+  const sub   = document.getElementById("walletBarSub");
+  const btn   = document.getElementById("walletBarBtn");
+
+  if (state === "contract_ok") {
+    if (pill) pill.textContent = "Sepolia ✓ Verified";
+    dots.forEach(d => d.style.background = "#3aab8a");
+    if (bar)   { bar.style.background = "rgba(245,158,11,0.10)"; bar.style.borderColor = "rgba(245,158,11,0.30)"; }
+    if (dot)   dot.style.background = "#f59e0b";
+    if (title) { title.textContent = "🦊 Wallet not connected"; title.style.color = "#92400e"; }
+    if (sub)   sub.textContent = "Contract is live on Sepolia. Connect MetaMask to write consent hashes on-chain.";
+    if (btn)   { btn.textContent = "🦊 Connect MetaMask"; btn.disabled = false; btn.style.display = ""; }
+
+  } else if (state === "connecting") {
+    if (btn)   { btn.textContent = "Connecting…"; btn.disabled = true; }
+    if (title) title.textContent = "Connecting to MetaMask…";
+
   } else if (state === "connected") {
     if (pill) pill.textContent = "Sepolia #11155111";
     dots.forEach(d => d.style.background = "#3aab8a");
     const addr = document.getElementById("chainContractAddr");
     if (addr) addr.textContent = CONTRACT_ADDRESS.slice(0,6) + "…" + CONTRACT_ADDRESS.slice(-4);
-    if (banner) banner.style.display = "none";
-    showChainToast("⛓ Chain connected — Sepolia" + (via ? " via " + via : ""));
+    if (bar)   { bar.style.background = "rgba(58,171,138,0.10)"; bar.style.borderColor = "rgba(58,171,138,0.30)"; }
+    if (dot)   dot.style.background = "#3aab8a";
+    if (title) { title.textContent = "✅ Wallet connected — Sepolia"; title.style.color = "#1e7a5e"; }
+    if (sub)   sub.textContent = (account ? "Account: " + account.slice(0,6) + "…" + account.slice(-4) + "  · " : "") + "You can now write consent hashes on-chain.";
+    if (btn)   { btn.textContent = "✓ Connected"; btn.disabled = true; btn.style.background = "#3aab8a"; }
+    showChainToast("⛓ MetaMask connected — Sepolia");
+
   } else {
+    // disconnected
     if (pill) pill.textContent = "Disconnected";
     dots.forEach(d => d.style.background = "var(--accent3)");
-    if (banner) banner.style.display = "flex";
+    if (dot)   dot.style.background = "#c8186a";
+    if (title) { title.textContent = "⚠️ Chain connection failed"; title.style.color = "#9d1261"; }
+    if (sub)   sub.textContent = "Could not reach Sepolia RPC. Check your connection and reload.";
+    if (btn)   { btn.textContent = "🔄 Retry"; btn.disabled = false; btn.style.display = ""; }
   }
 }
 
+// Keep old name as alias so any other callers don't break
+function updateChainUI(state, via) {
+  if (state === "connected")    updateWalletBar("connected");
+  else if (state === "connecting") updateWalletBar("connecting");
+  else                          updateWalletBar("disconnected");
+}
+
 async function manualConnect() {
-  const btn = document.querySelector("#chainConnectBanner button");
-  if (btn) { btn.textContent = "Connecting…"; btn.disabled = true; }
+  updateWalletBar("connecting");
   try {
-    if (!window.ethereum) { alert("MetaMask is not installed.\n\nInstall it from metamask.io then reload."); if(btn){btn.textContent="🦊 Connect MetaMask";btn.disabled=false;} return; }
+    if (!window.ethereum) {
+      alert("MetaMask is not installed.\n\nInstall it from metamask.io then reload.");
+      updateWalletBar("contract_ok");
+      return;
+    }
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
     const chainHex = await window.ethereum.request({ method: "eth_chainId" });
     const chainId  = parseInt(chainHex, 16);
@@ -1667,14 +1711,12 @@ async function manualConnect() {
       }
     }
     readProvider = window.ethereum; readContract = true;
-    const block = await window.ethereum.request({ method:"eth_blockNumber" });
-    updateChainUI("connected", "MetaMask");
+    updateWalletBar("connected", accounts[0]);
   } catch(err) {
     if (err.code === 4001) alert("You rejected the MetaMask request. Please try again and click Approve.");
     else alert("Connection failed:\n" + err.message);
-    updateChainUI("disconnected");
+    updateWalletBar("contract_ok");
   }
-  if (btn) { btn.textContent = "🦊 Connect MetaMask"; btn.disabled = false; }
 }
 
 /* ================================================================
