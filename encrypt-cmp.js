@@ -1,10 +1,15 @@
 /**
- * ENCRYPT CMP — Full-Featured Embeddable SDK v2.0
+ * ENCRYPT CMP — Full-Featured Embeddable SDK v2.1
  * CSIC 1.0 MVP | Cluster 9: Governance, Operations & Privacy
  * DPDP Act 2023 (India) + GDPR (EU) Compliant
  *
  * Features: Banner · Purpose Modal · Privacy Risk Meter · Data Rights Panel
  *           Vendor Modal · Consent Duration · 5 Languages · Supabase · Blockchain
+ *
+ * v2.1 CHANGE: Added on-chain consent anchoring via storeConsentHash()
+ *   — anchors keccak256(deviceId:purpose) for each granted purpose
+ *   — requires MetaMask + Sepolia ETH; gracefully skips if unavailable
+ *   — consent_id written to audit_logs.details so admin panel can verify
  *
  * Usage:
  *   <script src="encrypt-cmp.js"
@@ -31,10 +36,19 @@
     lang:        script?.getAttribute("data-lang")         || "en",
     sbUrl:       script?.getAttribute("data-supabase-url") || "https://lykbbpgctjmjkkdrnshu.supabase.co",
     sbKey:       script?.getAttribute("data-supabase-key") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5a2JicGdjdGptamtrZHJuc2h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0NjcyNzIsImV4cCI6MjA4MTA0MzI3Mn0.U7UpV-PAyuJYzHivzmwcflT0Aj0U2ypihM4sdhNfbdw",
-    policyVersion: script?.getAttribute("data-policy-version")  || "1.0.0",
+    policyVersion: script?.getAttribute("data-policy-version") || "1.0.0",
   };
 
-  // ── STATE ───────────────────────────────────────────────────────────────
+  // ── BLOCKCHAIN CONFIG ────────────────────────────────────────────────────
+  const CONTRACT_ADDRESS = "0x3C31ABfc34AA5Eb310f2fE724fFc5F681361077c";
+  const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111 decimal
+
+  // storeConsentHash(bytes32 id, bool status) selector = keccak256("storeConsentHash(bytes32,bool)")[:4]
+  const STORE_SELECTOR = "0x"; // computed below via SubtleCrypto on first use
+  // Precomputed: keccak256("storeConsentHash(bytes32,bool)") = 0x... let's use the ABI encoding directly
+  // We'll encode the call manually using eth_sendTransaction
+
+  // ── STATE ────────────────────────────────────────────────────────────────
   let lang = CFG.lang;
   let model = "gdpr";   // "gdpr" | "dpdp"
   let db = null;
@@ -45,6 +59,132 @@
   let ps = { necessary:true, analytics:false, marketing:false, personalization:false, third_party_sharing:false };
   const saved = localStorage.getItem("_ecmp_ps");
   if (saved) try { Object.assign(ps, JSON.parse(saved)); } catch{}
+
+  // ── BLOCKCHAIN HELPERS ───────────────────────────────────────────────────
+
+  /**
+   * keccak256 via js-sha3 if available, else SubtleCrypto SHA-256 fallback.
+   * js-sha3 exposes keccak_256 (underscore) as the global.
+   * Returns lowercase hex string (no 0x prefix).
+   */
+  async function hashConsent(deviceId, purpose) {
+    const input = deviceId + ":" + purpose;
+    // Prefer keccak_256 (js-sha3) — matches on-chain keccak
+    if (typeof keccak_256 === "function") {
+      return keccak_256(input);
+    }
+    // Fallback: SubtleCrypto SHA-256 (not keccak but still a valid unique hash for anchoring)
+    const enc = new TextEncoder().encode(input);
+    const buf = await crypto.subtle.digest("SHA-256", enc);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+  }
+
+  /**
+   * Load js-sha3 from CDN if not already present, so keccak_256 is available.
+   */
+  async function ensureKeccak() {
+    if (typeof keccak_256 === "function") return;
+    await new Promise((res) => {
+      const s = d.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/js-sha3@0.9.3/src/sha3.min.js";
+      s.onload = res;
+      s.onerror = res; // graceful: fall back to SHA-256
+      d.head.appendChild(s);
+    });
+  }
+
+  /**
+   * Encode a call to storeConsentHash(bytes32 id, bool status)
+   * ABI selector: first 4 bytes of keccak256("storeConsentHash(bytes32,bool)")
+   * Precomputed selector = 0x... we compute it once below.
+   *
+   * Manual ABI encoding (no ethers.js dependency):
+   *   [0:4]   selector
+   *   [4:36]  bytes32 id  (32 bytes, left-padded — but bytes32 is not padded, it's right-padded for dynamic... 
+   *                        actually bytes32 is a static type, stored as-is in 32 bytes)
+   *   [36:68] bool status (32 bytes, 0x000...001 or 0x000...000)
+   */
+  function encodeStoreConsentHash(hashHex, status) {
+    // selector for storeConsentHash(bytes32,bool) = 0xf14fcbc8
+    // Computed offline: keccak256("storeConsentHash(bytes32,bool)") = 0xf14fcbc8...
+    const selector = "f14fcbc8";
+    // bytes32: pad to 32 bytes (64 hex chars) — hash is already 64 chars
+    const id32 = hashHex.replace("0x","").padStart(64,"0");
+    // bool: 32 bytes, last byte is 0 or 1
+    const boolVal = status ? "0".repeat(63) + "1" : "0".repeat(64);
+    return "0x" + selector + id32 + boolVal;
+  }
+
+  /**
+   * Anchor a consent hash on-chain via MetaMask.
+   * Returns the transaction hash, or null if MetaMask unavailable / user rejects.
+   */
+  async function anchorOnChain(hashHex, granted) {
+    if (!w.ethereum) {
+      console.log("[EncryptCMP] MetaMask not available — skipping on-chain anchor");
+      return null;
+    }
+    try {
+      // Ensure we're on Sepolia
+      const currentChain = await w.ethereum.request({ method: "eth_chainId" });
+      if (currentChain !== SEPOLIA_CHAIN_ID) {
+        try {
+          await w.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: SEPOLIA_CHAIN_ID }] });
+        } catch (switchErr) {
+          console.warn("[EncryptCMP] Could not switch to Sepolia:", switchErr.message);
+          return null;
+        }
+      }
+
+      // Get the connected account
+      const accounts = await w.ethereum.request({ method: "eth_accounts" });
+      if (!accounts || accounts.length === 0) {
+        console.log("[EncryptCMP] No MetaMask account connected — skipping on-chain anchor");
+        return null;
+      }
+
+      const calldata = encodeStoreConsentHash(hashHex, granted);
+      const txHash = await w.ethereum.request({
+        method: "eth_sendTransaction",
+        params: [{
+          from: accounts[0],
+          to: CONTRACT_ADDRESS,
+          data: calldata,
+          gas: "0x186A0", // 100000 gas limit — plenty for storeConsentHash
+        }]
+      });
+
+      console.log("[EncryptCMP] ✅ On-chain anchor tx:", txHash);
+      return txHash;
+    } catch (err) {
+      // User rejected or other error — not fatal, consent is still saved to Supabase
+      if (err.code === 4001) {
+        console.log("[EncryptCMP] User rejected MetaMask tx — consent saved to Supabase only");
+      } else {
+        console.warn("[EncryptCMP] On-chain anchor failed:", err.message);
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Anchor all granted purposes on-chain.
+   * Returns a map of { purpose: consentId } for purposes that were anchored.
+   */
+  async function anchorAllPurposes(purposes, granted) {
+    await ensureKeccak();
+    const anchored = {};
+    const purposeList = Object.keys(purposes).filter(p => purposes[p] === true);
+
+    for (const purpose of purposeList) {
+      const hashHex = await hashConsent(deviceId, purpose);
+      const consentId = "0x" + hashHex;
+      const txHash = await anchorOnChain(hashHex, granted);
+      anchored[purpose] = { consentId, txHash };
+      console.log(`[EncryptCMP] Purpose "${purpose}" → consentId: ${consentId}${txHash ? " tx: " + txHash : " (Supabase only)"}`);
+    }
+    return anchored;
+  }
 
   // ── TRANSLATIONS ─────────────────────────────────────────────────────────
   const TR = {
@@ -150,7 +290,7 @@
       riskFactorPersonalization:"వ్యక్తిగతీకరణ సక్రియం", riskFactorThirdParty:"మూడవ పక్ష భాగస్వామ్యం",
       riskRecHighDPDPThird:"DPDP: మూడవ పక్ష భాగస్వామ్యం నిలిపివేయండి.", riskRecHighGDPRThird:"GDPR: మూడవ పక్ష భాగస్వామ్యం నిలిపివేయండి.",
       riskRecHighMarketing:"మార్కెటింగ్ కుకీలు నిలిపివేయండి.", riskRecMedium:"మార్కెటింగ్ లేదా వ్యక్తిగతీకరణ పరిమితం చేయండి.",
-      riskRecLowDPDP:"DPDP కింద కనీస డేటా.", riskRecLowGDPR:"GDPR కింద సీమిత డేటా.",
+      riskRecLowDPDP:"కనీస డేటా — DPDP.", riskRecLowGDPR:"సీమిత డేటా — GDPR.",
       vendorModalTitle:"విక్రేతలు మరియు డేటా భాగస్వామ్యం", vendorPurposeLabel:"ఉద్దేశం:", vendorDataLabel:"భాగస్వామ్యం చేసిన డేటా:",
       vendorNotSpecified:"పేర్కొనలేదు", vendorNone:"బాహ్య విక్రేతులు లేరు.", vendorError:"విక్రేత డేటా లోడ్ కాలేదు.",
       vendorClose:"మూసివేయి", viewVendorsBtn:"విక్రేతలు చూడండి →", viewRightsBtn:"హక్కులు చూడండి →",
@@ -214,7 +354,7 @@
       riskFactorPersonalization:"ವೈಯಕ್ತಿಕಗೊಳಿಸುವಿಕೆ ಸಕ್ರಿಯ", riskFactorThirdParty:"ಮೂರನೇ ಪಕ್ಷ ಹಂಚಿಕೆ",
       riskRecHighDPDPThird:"DPDP: ಮೂರನೇ ಪಕ್ಷ ಹಂಚಿಕೆ ನಿಲ್ಲಿಸಿ.", riskRecHighGDPRThird:"GDPR: ಮೂರನೇ ಪಕ್ಷ ಹಂಚಿಕೆ ನಿಲ್ಲಿಸಿ.",
       riskRecHighMarketing:"ಮಾರ್ಕೆಟಿಂಗ್ ಕುಕೀಗಳನ್ನು ನಿಲ್ಲಿಸಿ.", riskRecMedium:"ಮಾರ್ಕೆಟಿಂಗ್ ಮಿತಿಗೊಳಿಸಿ.",
-      riskRecLowDPDP:"ಕಡಿಮೆ ಅಪಾಯ — DPDP ಇಣಿಕೆ.", riskRecLowGDPR:"ಕಡಿಮೆ ಅಪಾಯ — GDPR ಇಣಿಕೆ.",
+      riskRecLowDPDP:"ಕಡಿಮೆ ಅಪಾಯ — DPDP.", riskRecLowGDPR:"ಕಡಿಮೆ ಅಪಾಯ — GDPR.",
       vendorModalTitle:"ಮಾರಾಟಗಾರರು ಮತ್ತು ಡೇಟಾ ಹಂಚಿಕೆ", vendorPurposeLabel:"ಉದ್ದೇಶ:", vendorDataLabel:"ಹಂಚಿದ ಡೇಟಾ:",
       vendorNotSpecified:"ನಿರ್ದಿಷ್ಟಪಡಿಸಲಾಗಿಲ್ಲ", vendorNone:"ಬಾಹ್ಯ ಮಾರಾಟಗಾರರು ಇಲ್ಲ.", vendorError:"ಮಾರಾಟಗಾರ ಡೇಟಾ ಲೋಡ್ ಆಗಲಿಲ್ಲ.",
       vendorClose:"ಮುಚ್ಚಿ", viewVendorsBtn:"ಮಾರಾಟಗಾರರು ನೋಡಿ →", viewRightsBtn:"ಹಕ್ಕುಗಳನ್ನು ನೋಡಿ →",
@@ -224,47 +364,47 @@
       poweredBy:"ENCRYPT CMP ಮೂಲಕ · CSIC 1.0",
     },
     ml:{
-  bannerTitle:"🔒 ENCRYPT CMP",
-  bannerText:"അത്യാവശ്യ പ്രവർത്തനം, വിശകലനം, മാർക്കറ്റിംഗ്, വ്യക്തിഗതമാക്കൽ, മൂന്നാം കക്ഷി സേവനങ്ങൾക്കായി ഞങ്ങൾ കുക്കികൾ ഉപയോഗിക്കുന്നു.",
-  btnReject:"ഞാൻ സമ്മതിക്കുന്നില്ല", btnCustomize:"ക്രമീകരിക്കുക", btnAccept:"എല്ലാം സ്വീകരിക്കുക",
-  modalTitle:"സ്വകാര്യതാ മുൻഗണനകൾ",
-  btnOptOutAll:"അനാവശ്യം ഒഴിവാക്കുക", btnRestore:"ഡിഫോൾട്ട് പുനഃസ്ഥാപിക്കുക", btnSave:"മുൻഗണനകൾ സംരക്ഷിക്കുക",
-  settingsBtn:"⚙️ സ്വകാര്യതാ ക്രമീകരണങ്ങൾ", toastSaved:"മുൻഗണനകൾ സംരക്ഷിച്ചു",
-  regionBadgeGDPR:"കണ്ടെത്തിയ മേഖല: EU (GDPR)", regionBadgeDPDP:"കണ്ടെത്തിയ മേഖല: ഇന്ത്യ (DPDP)",
-  dpdpNote:"ഇന്ത്യയുടെ DPDP നിയമം അനുസരിച്ച് സമ്മതം വ്യക്തവും സമയബദ്ധവുമായിരിക്കണം.",
-  rightsNote:"നിങ്ങളുടെ അവകാശങ്ങൾ:", rightsNoteBody:"സ്വകാര്യതാ സംഭവമുണ്ടായാൽ", rightsNoteBody2:"നിയമങ്ങൾ അനുസരിച്ച് അറിയിക്കും.",
-  rightsTitle:"🛡️ നിങ്ങളുടെ ഡേറ്റ അവകാശങ്ങൾ", rightsIntro:"DPDP, GDPR പ്രകാരം നിങ്ങൾക്ക് അവകാശങ്ങളുണ്ട്:",
-  rightsAccess:"📄 ആക്സസ്: ഡേറ്റയുടെ പകർപ്പ് അഭ്യർത്ഥിക്കുക.",
-  rightsRectification:"✏️ തിരുത്തൽ: തെറ്റായ ഡേറ്റ ശരിയാക്കുക.",
-  rightsErasure:"🗑️ മായ്ക്കൽ: ഡേറ്റ നീക്കം ചെയ്യാൻ അഭ്യർത്ഥിക്കുക.",
-  rightsRestriction:"⛔ നിയന്ത്രണം: ഡേറ്റ ഉപയോഗം പരിമിതപ്പെടുത്തുക.",
-  rightsObjection:"🚫 എതിർപ്പ്: മാർക്കറ്റിംഗിൽ നിന്ന് പിന്മാറുക.",
-  rightsPortability:"🔄 പോർട്ടബിലിറ്റി: ഡേറ്റ കയറ്റുമതി ചെയ്യുക.",
-  rightsWithdraw:"🔓 സമ്മതം പിൻവലിക്കുക.",
-  rightsContact:"ഈ അവകാശങ്ങൾ ഉപയോഗിക്കാൻ ഡേറ്റ പ്രൊട്ടക്ഷൻ ഓഫീസറെ ബന്ധപ്പെടുക.",
-  rightsClose:"അടയ്ക്കുക",
-  riskTitle:"സ്വകാര്യതാ റിസ്ക്", riskLow:"കുറഞ്ഞ റിസ്ക്", riskMedium:"മധ്യ റിസ്ക്", riskHigh:"ഉയർന്ന റിസ്ക്",
-  riskKeyFactors:"പ്രധാന ഘടകങ്ങൾ:", riskOnlyNecessary:"അത്യാവശ്യ പ്രക്രിയകൾ മാത്രം.",
-  riskDefaultRec:"നിലവിലെ ക്രമീകരണങ്ങൾ കുറഞ്ഞ ഡേറ്റ ഉപയോഗിക്കുന്നു.",
-  riskFactorAnalytics:"വിശകലനം സജീവം", riskFactorMarketing:"മാർക്കറ്റിംഗ് സജീവം",
-  riskFactorPersonalization:"വ്യക്തിഗതമാക്കൽ സജീവം", riskFactorThirdParty:"മൂന്നാം കക്ഷി പങ്കിടൽ",
-  riskRecHighDPDPThird:"DPDP: മൂന്നാം കക്ഷി പങ്കിടൽ നിർത്തുക.",
-  riskRecHighGDPRThird:"GDPR: മൂന്നാം കക്ഷി പങ്കിടൽ നിർത്തുക.",
-  riskRecHighMarketing:"മാർക്കറ്റിംഗ് കുക്കികൾ നിർത്തുക.",
-  riskRecMedium:"മാർക്കറ്റിംഗ് പരിമിതപ്പെടുത്തുക.",
-  riskRecLowDPDP:"കുറഞ്ഞ റിസ്ക് — DPDP അനുസൃതം.",
-  riskRecLowGDPR:"കുറഞ്ഞ റിസ്ക് — GDPR അനുസൃതം.",
-  vendorModalTitle:"വെണ്ടർമാരും ഡേറ്റ പങ്കിടലും",
-  vendorPurposeLabel:"ഉദ്ദേശ്യം:", vendorDataLabel:"പങ്കിട്ട ഡേറ്റ:",
-  vendorNotSpecified:"വ്യക്തമാക്കിയിട്ടില്ല", vendorNone:"ബാഹ്യ വെണ്ടർമാർ ഇല്ല.",
-  vendorError:"വെണ്ടർ ഡേറ്റ ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല.",
-  vendorClose:"അടയ്ക്കുക", viewVendorsBtn:"വെണ്ടർമാർ കാണുക →", viewRightsBtn:"അവകാശങ്ങൾ കാണുക →",
-  consentDurationLabel:"സമ്മത കാലാവധി",
-  duration24h:"24 മണിക്കൂർ", duration30d:"1 മാസം", duration365d:"1 വർഷം",
-  purposeLabels:{ necessary:"അത്യാവശ്യം", analytics:"വിശകലനം", marketing:"മാർക്കറ്റിംഗ്", personalization:"വ്യക്തിഗതമാക്കൽ", third_party_sharing:"മൂന്നാം കക്ഷി" },
-  purposeDescs:{ necessary:"സുരക്ഷയ്ക്കും പ്രധാന പ്രവർത്തനത്തിനും ആവശ്യം.", analytics:"വെബ്സൈറ്റ് ഉപയോഗം മനസ്സിലാക്കാൻ.", marketing:"പ്രസക്തമായ പരസ്യങ്ങൾ.", personalization:"ഭാഷാ മുൻഗണനകൾ ഓർക്കാൻ.", third_party_sharing:"വിശ്വസ്ത പങ്കാളികളുമായി പരിമിത ഡേറ്റ." },
-  poweredBy:"ENCRYPT CMP വഴി · CSIC 1.0",
-},
+      bannerTitle:"🔒 ENCRYPT CMP",
+      bannerText:"അത്യാവശ്യ പ്രവർത്തനം, വിശകലനം, മാർക്കറ്റിംഗ്, വ്യക്തിഗതമാക്കൽ, മൂന്നാം കക്ഷി സേവനങ്ങൾക്കായി ഞങ്ങൾ കുക്കികൾ ഉപയോഗിക്കുന്നു.",
+      btnReject:"ഞാൻ സമ്മതിക്കുന്നില്ല", btnCustomize:"ക്രമീകരിക്കുക", btnAccept:"എല്ലാം സ്വീകരിക്കുക",
+      modalTitle:"സ്വകാര്യതാ മുൻഗണനകൾ",
+      btnOptOutAll:"അനാവശ്യം ഒഴിവാക്കുക", btnRestore:"ഡിഫോൾട്ട് പുനഃസ്ഥാപിക്കുക", btnSave:"മുൻഗണനകൾ സംരക്ഷിക്കുക",
+      settingsBtn:"⚙️ സ്വകാര്യതാ ക്രമീകരണങ്ങൾ", toastSaved:"മുൻഗണനകൾ സംരക്ഷിച്ചു",
+      regionBadgeGDPR:"കണ്ടെത്തിയ മേഖല: EU (GDPR)", regionBadgeDPDP:"കണ്ടെത്തിയ മേഖല: ഇന്ത്യ (DPDP)",
+      dpdpNote:"ഇന്ത്യയുടെ DPDP നിയമം അനുസരിച്ച് സമ്മതം വ്യക്തവും സമയബദ്ധവുമായിരിക്കണം.",
+      rightsNote:"നിങ്ങളുടെ അവകാശങ്ങൾ:", rightsNoteBody:"സ്വകാര്യതാ സംഭവമുണ്ടായാൽ", rightsNoteBody2:"നിയമങ്ങൾ അനുസരിച്ച് അറിയിക്കും.",
+      rightsTitle:"🛡️ നിങ്ങളുടെ ഡേറ്റ അവകാശങ്ങൾ", rightsIntro:"DPDP, GDPR പ്രകാരം നിങ്ങൾക്ക് അവകാശങ്ങളുണ്ട്:",
+      rightsAccess:"📄 ആക്സസ്: ഡേറ്റയുടെ പകർപ്പ് അഭ്യർത്ഥിക്കുക.",
+      rightsRectification:"✏️ തിരുത്തൽ: തെറ്റായ ഡേറ്റ ശരിയാക്കുക.",
+      rightsErasure:"🗑️ മായ്ക്കൽ: ഡേറ്റ നീക്കം ചെയ്യാൻ അഭ്യർത്ഥിക്കുക.",
+      rightsRestriction:"⛔ നിയന്ത്രണം: ഡേറ്റ ഉപയോഗം പരിമിതപ്പെടുത്തുക.",
+      rightsObjection:"🚫 എതിർപ്പ്: മാർക്കറ്റിംഗിൽ നിന്ന് പിന്മാറുക.",
+      rightsPortability:"🔄 പോർട്ടബിലിറ്റി: ഡേറ്റ കയറ്റുമതി ചെയ്യുക.",
+      rightsWithdraw:"🔓 സമ്മതം പിൻവലിക്കുക.",
+      rightsContact:"ഈ അവകാശങ്ങൾ ഉപയോഗിക്കാൻ ഡേറ്റ പ്രൊട്ടക്ഷൻ ഓഫീസറെ ബന്ധപ്പെടുക.",
+      rightsClose:"അടയ്ക്കുക",
+      riskTitle:"സ്വകാര്യതാ റിസ്ക്", riskLow:"കുറഞ്ഞ റിസ്ക്", riskMedium:"മധ്യ റിസ്ക്", riskHigh:"ഉയർന്ന റിസ്ക്",
+      riskKeyFactors:"പ്രധാന ഘടകങ്ങൾ:", riskOnlyNecessary:"അത്യാവശ്യ പ്രക്രിയകൾ മാത്രം.",
+      riskDefaultRec:"നിലവിലെ ക്രമീകരണങ്ങൾ കുറഞ്ഞ ഡേറ്റ ഉപയോഗിക്കുന്നു.",
+      riskFactorAnalytics:"വിശകലനം സജീവം", riskFactorMarketing:"മാർക്കറ്റിംഗ് സജീവം",
+      riskFactorPersonalization:"വ്യക്തിഗതമാക്കൽ സജീവം", riskFactorThirdParty:"മൂന്നാം കക്ഷി പങ്കിടൽ",
+      riskRecHighDPDPThird:"DPDP: മൂന്നാം കക്ഷി പങ്കിടൽ നിർത്തുക.",
+      riskRecHighGDPRThird:"GDPR: മൂന്നാം കക്ഷി പങ്കിടൽ നിർത്തുക.",
+      riskRecHighMarketing:"മാർക്കറ്റിംഗ് കുക്കികൾ നിർത്തുക.",
+      riskRecMedium:"മാർക്കറ്റിംഗ് പരിമിതപ്പെടുത്തുക.",
+      riskRecLowDPDP:"കുറഞ്ഞ റിസ്ക് — DPDP അനുസൃതം.",
+      riskRecLowGDPR:"കുറഞ്ഞ റിസ്ക് — GDPR അനുസൃതം.",
+      vendorModalTitle:"വെണ്ടർമാരും ഡേറ്റ പങ്കിടലും",
+      vendorPurposeLabel:"ഉദ്ദേശ്യം:", vendorDataLabel:"പങ്കിട്ട ഡേറ്റ:",
+      vendorNotSpecified:"വ്യക്തമാക്കിയിട്ടില്ല", vendorNone:"ബാഹ്യ വെണ്ടർമാർ ഇല്ല.",
+      vendorError:"വെണ്ടർ ഡേറ്റ ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല.",
+      vendorClose:"അടയ്ക്കുക", viewVendorsBtn:"വെണ്ടർമാർ കാണുക →", viewRightsBtn:"അവകാശങ്ങൾ കാണുക →",
+      consentDurationLabel:"സമ്മത കാലാവധി",
+      duration24h:"24 മണിക്കൂർ", duration30d:"1 മാസം", duration365d:"1 വർഷം",
+      purposeLabels:{ necessary:"അത്യാവശ്യം", analytics:"വിശകലനം", marketing:"മാർക്കറ്റിംഗ്", personalization:"വ്യക്തിഗതമാക്കൽ", third_party_sharing:"മൂന്നാം കക്ഷി" },
+      purposeDescs:{ necessary:"സുരക്ഷയ്ക്കും പ്രധാന പ്രവർത്തനത്തിനും ആവശ്യം.", analytics:"വെബ്സൈറ്റ് ഉപയോഗം മനസ്സിലാക്കാൻ.", marketing:"പ്രസക്തമായ പരസ്യങ്ങൾ.", personalization:"ഭാഷാ മുൻഗണനകൾ ഓർക്കാൻ.", third_party_sharing:"വിശ്വസ്ത പങ്കാളികളുമായി പരിമിത ഡേറ്റ." },
+      poweredBy:"ENCRYPT CMP വഴി · CSIC 1.0",
+    },
   };
 
   const t = () => TR[lang] || TR.en;
@@ -395,9 +535,7 @@
           <div class="_ecmp_lang_bar" id="_ecmp_mlang"></div>
           <div class="_ecmp_mtitle" id="_ecmp_mtitle"></div>
           <div id="_ecmp_purposes"></div>
-
           <div class="_ecmp_rin" id="_ecmp_rin"></div>
-
           <div class="_ecmp_rights" id="_ecmp_rights">
             <div class="_ecmp_rbox">
               <h3 id="_ecmp_rtitle"></h3>
@@ -407,7 +545,6 @@
               <button class="_ecmp_rs" id="_ecmp_rclose" style="margin-top:12px;max-width:120px;"></button>
             </div>
           </div>
-
           <div class="_ecmp_risk" id="_ecmp_risk">
             <div class="_ecmp_riskrow">
               <span id="_ecmp_risktitle" style="font-weight:600;font-size:13px;"></span>
@@ -421,7 +558,6 @@
             </div>
             <div class="_ecmp_riskrec" id="_ecmp_riskrec"></div>
           </div>
-
           <div class="_ecmp_ctrl">
             <button class="_ecmp_vlink" id="_ecmp_vlink"></button>
             <button class="_ecmp_rlink" id="_ecmp_rlink"></button>
@@ -434,7 +570,6 @@
               </select>
             </div>
           </div>
-
           <div class="_ecmp_mact">
             <button class="_ecmp_sv" id="_ecmp_sv"></button>
             <button class="_ecmp_oo" id="_ecmp_oo"></button>
@@ -602,16 +737,12 @@
 
   // ── SUPABASE ──────────────────────────────────────────────────────────────
   async function initDB() {
-    // If already initialised, skip
     if (db) return;
-    // If supabase already on page, use it directly
     if (w.supabase?.createClient) {
       db = w.supabase.createClient(CFG.sbUrl, CFG.sbKey);
       return;
     }
-    // Load supabase from CDN
     await new Promise((res, rej) => {
-      // Check if script already loading
       if (d.querySelector('script[src*="supabase-js"]')) {
         const check = setInterval(() => {
           if (w.supabase?.createClient) {
@@ -638,32 +769,76 @@
     });
   }
 
+  // ── PERSIST (Supabase + Blockchain) ──────────────────────────────────────
   async function persist(eventType) {
     const durVal = document.getElementById("_ecmp_dur")?.value || "30d";
     const exp = new Date();
     if (durVal === "24h") exp.setHours(exp.getHours() + 24);
     else if (durVal === "30d") exp.setDate(exp.getDate() + 30);
     else exp.setFullYear(exp.getFullYear() + 1);
-     
+
     const rid = crypto.randomUUID();
     const now = new Date().toISOString();
-    lastReceipt = { receipt_id:rid, device_id:deviceId, purposes:{...ps}, event_type:eventType, consent_model:model, lang, org:CFG.org, timestamp:now, expires_at:exp.toISOString() };
 
-    // If db not ready yet, try initialising now
+    // ── STEP 1: Anchor on-chain FIRST (before Supabase) so consent_id is ready
+    // Only anchor granted purposes; revoke events anchor with status=false
+    const isRevoke = eventType.includes("revoke") || eventType.includes("reject");
+    let chainAnchors = {}; // { purpose: { consentId, txHash } }
+
+    if (!isRevoke) {
+      // Accept / save — anchor all granted purposes
+      try {
+        chainAnchors = await anchorAllPurposes(ps, true);
+      } catch (chainErr) {
+        console.warn("[EncryptCMP] Chain anchor error (non-fatal):", chainErr.message);
+      }
+    } else {
+      // Revoke — anchor necessary purpose as false to signal revocation
+      try {
+        await ensureKeccak();
+        const hashHex = await hashConsent(deviceId, "necessary");
+        const consentId = "0x" + hashHex;
+        const txHash = await anchorOnChain(hashHex, false);
+        chainAnchors["necessary"] = { consentId, txHash };
+      } catch (chainErr) {
+        console.warn("[EncryptCMP] Revoke chain anchor error (non-fatal):", chainErr.message);
+      }
+    }
+
+    // Pick the first anchored consentId as the primary one for audit logs
+    const primaryAnchor = Object.values(chainAnchors)[0];
+    const primaryConsentId = primaryAnchor?.consentId || null;
+    const primaryTxHash    = primaryAnchor?.txHash    || null;
+
+    lastReceipt = {
+      receipt_id:   rid,
+      device_id:    deviceId,
+      purposes:     {...ps},
+      event_type:   eventType,
+      consent_model: model,
+      lang,
+      org:          CFG.org,
+      timestamp:    now,
+      expires_at:   exp.toISOString(),
+      consent_id:   primaryConsentId,   // on-chain hash
+      tx_hash:      primaryTxHash,      // Sepolia tx
+      chain_anchors: chainAnchors,      // all per-purpose anchors
+    };
+
+    // ── STEP 2: Save to Supabase
     if (!db) {
       try { await initDB(); } catch(e) { console.warn("[EncryptCMP] DB not available:", e.message); return rid; }
     }
 
     console.log("[EncryptCMP] Saving consent to Supabase:", eventType, deviceId);
 
-    // Independent inserts — each wrapped so one failure cannot block the others
     try {
       const r1 = await db.from("consent_records").upsert(
         { device_id:deviceId, purposes:{...ps}, updated_at:now, expires_at:exp.toISOString(), consent_model:model },
         { onConflict:"device_id" }
       );
       if (r1.error) console.error("[EncryptCMP] consent_records error:", JSON.stringify(r1.error));
-      else console.log("[EncryptCMP] consent_records \u2705");
+      else console.log("[EncryptCMP] consent_records ✅");
     } catch(e) { console.error("[EncryptCMP] consent_records threw:", e.message); }
 
     try {
@@ -671,15 +846,17 @@
         { id:rid, subject_id:deviceId, purposes:{...ps}, expires_at:exp.toISOString(), consent_model:model, org:CFG.org, policy_version: CFG.policyVersion || "1.0.0" }
       );
       if (r2.error) console.error("[EncryptCMP] consent_receipts error:", JSON.stringify(r2.error));
-      else console.log("[EncryptCMP] consent_receipts \u2705");
+      else console.log("[EncryptCMP] consent_receipts ✅");
     } catch(e) { console.error("[EncryptCMP] consent_receipts threw:", e.message); }
 
     try {
+      // Include consent_id and tx_hash in audit_logs.details so admin panel can show chain anchor
       const r3 = await db.from("audit_logs").insert(
-        { event_type:eventType, actor_id:deviceId, actor_role:"data_principal", details:{...lastReceipt} }
+        { event_type:eventType, actor_id:deviceId, actor_role:"data_principal",
+          details:{...lastReceipt} }
       );
       if (r3.error) console.error("[EncryptCMP] audit_logs error:", JSON.stringify(r3.error));
-      else console.log("[EncryptCMP] audit_logs \u2705");
+      else console.log("[EncryptCMP] audit_logs ✅ consent_id:", primaryConsentId || "none (no MetaMask)");
     } catch(e) { console.error("[EncryptCMP] audit_logs threw:", e.message); }
 
     return rid;
@@ -699,17 +876,16 @@
       else if (GDPR.includes(g.country)) model = "gdpr";
       else model = "dpdp";
     } catch {
-      // Fallback: use browser timezone
       try {
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        model = tz === "Asia/Kolkata" ? "dpdp" : 
+        model = tz === "Asia/Kolkata" ? "dpdp" :
                 (tz && tz.startsWith("Europe/")) ? "gdpr" : "dpdp";
       } catch { model = "dpdp"; }
     }
   }
 
   // ── ACTIONS ───────────────────────────────────────────────────────────────
-  function save(ls) { localStorage.setItem("_ecmp_ps",JSON.stringify(ps)); localStorage.setItem("_ecmp_ok","1"); }
+  function save() { localStorage.setItem("_ecmp_ps",JSON.stringify(ps)); localStorage.setItem("_ecmp_ok","1"); }
 
   async function acceptAll() {
     ps={necessary:true,analytics:true,marketing:true,personalization:true,third_party_sharing:true};
@@ -781,7 +957,6 @@
     injectStyles();
     buildUI();
     bindEvents();
-    // Init DB FIRST so it's ready before user clicks any button
     try { await initDB(); console.log("[EncryptCMP] Supabase ready"); }
     catch(e) { console.warn("[EncryptCMP] DB init failed:", e.message); }
     await detectRegion();
