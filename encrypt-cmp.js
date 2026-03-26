@@ -105,9 +105,10 @@
    *   [36:68] bool status (32 bytes, 0x000...001 or 0x000...000)
    */
   function encodeStoreConsentHash(hashHex, status) {
-    // selector for storeConsentHash(bytes32,bool) = 0xf14fcbc8
-    // Computed offline: keccak256("storeConsentHash(bytes32,bool)") = 0xf14fcbc8...
-    const selector = "f14fcbc8";
+    // selector for storeConsentHash(bytes32,bool)
+    // keccak256("storeConsentHash(bytes32,bool)") = 0x4b9cc5bd  ← verified with pure-Python keccak
+    // (previous value 0xf14fcbc8 was wrong — caused every tx to revert)
+    const selector = "4b9cc5bd";
     // bytes32: pad to 32 bytes (64 hex chars) — hash is already 64 chars
     const id32 = hashHex.replace("0x","").padStart(64,"0");
     // bool: 32 bytes, last byte is 0 or 1
