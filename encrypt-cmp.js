@@ -1,15 +1,17 @@
 /**
- * ENCRYPT CMP — Full-Featured Embeddable SDK v2.1
+ * ENCRYPT CMP — Full-Featured Embeddable SDK v2.1.1
  * CSIC 1.0 MVP | Cluster 9: Governance, Operations & Privacy
  * DPDP Act 2023 (India) + GDPR (EU) Compliant
  *
- * Features: Banner · Purpose Modal · Privacy Risk Meter · Data Rights Panel
- *           Vendor Modal · Consent Duration · 5 Languages · Supabase · Blockchain
- *
- * v2.1 CHANGE: Added on-chain consent anchoring via storeConsentHash()
- *   — anchors keccak256(deviceId:purpose) for each granted purpose
- *   — requires MetaMask + Sepolia ETH; gracefully skips if unavailable
- *   — consent_id written to audit_logs.details so admin panel can verify
+ * FIXES in v2.1.1:
+ *   - lastReceipt now persisted to localStorage (_ecmp_receipt)
+ *     so it survives page refresh
+ *   - lastReceipt set at TOP of persist() before any await
+ *     fixes race condition where showReceipt() fires before Supabase resolves
+ *   - safeStorage wrapper on ALL localStorage calls
+ *     fixes Edge/Chrome Tracking Prevention silently blocking writes
+ *   - revokeAll() now clears _ecmp_receipt from localStorage
+ *   - init() restores lastReceipt from localStorage on page load
  *
  * Usage:
  *   <script src="encrypt-cmp.js"
@@ -32,101 +34,85 @@
 
   const script = d.currentScript || d.querySelector("script[data-org]");
   const CFG = {
-    org:         script?.getAttribute("data-org")          || "ENCRYPT CMP",
-    lang:        script?.getAttribute("data-lang")         || "en",
-    sbUrl:       script?.getAttribute("data-supabase-url") || "https://lykbbpgctjmjkkdrnshu.supabase.co",
-    sbKey:       script?.getAttribute("data-supabase-key") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5a2JicGdjdGptamtrZHJuc2h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0NjcyNzIsImV4cCI6MjA4MTA0MzI3Mn0.U7UpV-PAyuJYzHivzmwcflT0Aj0U2ypihM4sdhNfbdw",
+    org:           script?.getAttribute("data-org")          || "ENCRYPT CMP",
+    lang:          script?.getAttribute("data-lang")         || "en",
+    sbUrl:         script?.getAttribute("data-supabase-url") || "https://lykbbpgctjmjkkdrnshu.supabase.co",
+    sbKey:         script?.getAttribute("data-supabase-key") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5a2JicGdjdGptamtrZHJuc2h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0NjcyNzIsImV4cCI6MjA4MTA0MzI3Mn0.U7UpV-PAyuJYzHivzmwcflT0Aj0U2ypihM4sdhNfbdw",
     policyVersion: script?.getAttribute("data-policy-version") || "1.0.0",
   };
 
-  // ── BLOCKCHAIN CONFIG ────────────────────────────────────────────────────
+  // ── BLOCKCHAIN CONFIG ─────────────────────────────────────────────────────
   const CONTRACT_ADDRESS = "0x3C31ABfc34AA5Eb310f2fE724fFc5F681361077c";
-  const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111 decimal
+  const SEPOLIA_CHAIN_ID = "0xaa36a7";
 
-  // storeConsentHash(bytes32 id, bool status) selector = keccak256("storeConsentHash(bytes32,bool)")[:4]
-  const STORE_SELECTOR = "0x"; // computed below via SubtleCrypto on first use
-  // Precomputed: keccak256("storeConsentHash(bytes32,bool)") = 0x... let's use the ABI encoding directly
-  // We'll encode the call manually using eth_sendTransaction
+  // ── SAFE LOCALSTORAGE WRAPPER (fixes Tracking Prevention blocks) ──────────
+  const safeStorage = {
+    get: (key) => {
+      try { return localStorage.getItem(key); } catch(e) { return null; }
+    },
+    set: (key, val) => {
+      try { localStorage.setItem(key, val); }
+      catch(e) { console.warn("[EncryptCMP] localStorage blocked for key:", key); }
+    },
+    remove: (key) => {
+      try { localStorage.removeItem(key); } catch(e) {}
+    },
+  };
 
-  // ── STATE ────────────────────────────────────────────────────────────────
-  let lang = CFG.lang;
-  let model = "gdpr";   // "gdpr" | "dpdp"
-  let db = null;
+  // ── STATE ─────────────────────────────────────────────────────────────────
+  let lang  = CFG.lang;
+  let model = "gdpr";
+  let db    = null;
+
+  // Restore lastReceipt from localStorage so page refresh doesn't lose it
   let lastReceipt = null;
-  let deviceId = localStorage.getItem("_ecmp_did") || crypto.randomUUID();
-  localStorage.setItem("_ecmp_did", deviceId);
+  const _savedReceipt = safeStorage.get("_ecmp_receipt");
+  if (_savedReceipt) {
+    try { lastReceipt = JSON.parse(_savedReceipt); } catch(e) {}
+  }
+
+  let deviceId = safeStorage.get("_ecmp_did") || crypto.randomUUID();
+  safeStorage.set("_ecmp_did", deviceId);
 
   let ps = { necessary:true, analytics:false, marketing:false, personalization:false, third_party_sharing:false };
-  const saved = localStorage.getItem("_ecmp_ps");
+  const saved = safeStorage.get("_ecmp_ps");
   if (saved) try { Object.assign(ps, JSON.parse(saved)); } catch{}
 
-  // ── BLOCKCHAIN HELPERS ───────────────────────────────────────────────────
-
-  /**
-   * keccak256 via js-sha3 if available, else SubtleCrypto SHA-256 fallback.
-   * js-sha3 exposes keccak_256 (underscore) as the global.
-   * Returns lowercase hex string (no 0x prefix).
-   */
+  // ── BLOCKCHAIN HELPERS ────────────────────────────────────────────────────
   async function hashConsent(deviceId, purpose) {
     const input = deviceId + ":" + purpose;
-    // Prefer keccak_256 (js-sha3) — matches on-chain keccak
     if (typeof keccak_256 === "function") {
       return keccak_256(input);
     }
-    // Fallback: SubtleCrypto SHA-256 (not keccak but still a valid unique hash for anchoring)
     const enc = new TextEncoder().encode(input);
     const buf = await crypto.subtle.digest("SHA-256", enc);
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
   }
 
-  /**
-   * Load js-sha3 from CDN if not already present, so keccak_256 is available.
-   */
   async function ensureKeccak() {
     if (typeof keccak_256 === "function") return;
     await new Promise((res) => {
       const s = d.createElement("script");
       s.src = "https://cdn.jsdelivr.net/npm/js-sha3@0.9.3/src/sha3.min.js";
       s.onload = res;
-      s.onerror = res; // graceful: fall back to SHA-256
+      s.onerror = res;
       d.head.appendChild(s);
     });
   }
 
-  /**
-   * Encode a call to storeConsentHash(bytes32 id, bool status)
-   * ABI selector: first 4 bytes of keccak256("storeConsentHash(bytes32,bool)")
-   * Precomputed selector = 0x... we compute it once below.
-   *
-   * Manual ABI encoding (no ethers.js dependency):
-   *   [0:4]   selector
-   *   [4:36]  bytes32 id  (32 bytes, left-padded — but bytes32 is not padded, it's right-padded for dynamic... 
-   *                        actually bytes32 is a static type, stored as-is in 32 bytes)
-   *   [36:68] bool status (32 bytes, 0x000...001 or 0x000...000)
-   */
   function encodeStoreConsentHash(hashHex, status) {
-    // selector for storeConsentHash(bytes32,bool)
-    // keccak256("storeConsentHash(bytes32,bool)") = 0x4b9cc5bd  ← verified with pure-Python keccak
-    // (previous value 0xf14fcbc8 was wrong — caused every tx to revert)
     const selector = "4b9cc5bd";
-    // bytes32: pad to 32 bytes (64 hex chars) — hash is already 64 chars
-    const id32 = hashHex.replace("0x","").padStart(64,"0");
-    // bool: 32 bytes, last byte is 0 or 1
-    const boolVal = status ? "0".repeat(63) + "1" : "0".repeat(64);
+    const id32     = hashHex.replace("0x","").padStart(64,"0");
+    const boolVal  = status ? "0".repeat(63) + "1" : "0".repeat(64);
     return "0x" + selector + id32 + boolVal;
   }
 
-  /**
-   * Anchor a consent hash on-chain via MetaMask.
-   * Returns the transaction hash, or null if MetaMask unavailable / user rejects.
-   */
   async function anchorOnChain(hashHex, granted) {
     if (!w.ethereum) {
       console.log("[EncryptCMP] MetaMask not available — skipping on-chain anchor");
       return null;
     }
     try {
-      // Ensure we're on Sepolia
       const currentChain = await w.ethereum.request({ method: "eth_chainId" });
       if (currentChain !== SEPOLIA_CHAIN_ID) {
         try {
@@ -136,29 +122,19 @@
           return null;
         }
       }
-
-      // Get the connected account
       const accounts = await w.ethereum.request({ method: "eth_accounts" });
       if (!accounts || accounts.length === 0) {
         console.log("[EncryptCMP] No MetaMask account connected — skipping on-chain anchor");
         return null;
       }
-
       const calldata = encodeStoreConsentHash(hashHex, granted);
-      const txHash = await w.ethereum.request({
+      const txHash   = await w.ethereum.request({
         method: "eth_sendTransaction",
-        params: [{
-          from: accounts[0],
-          to: CONTRACT_ADDRESS,
-          data: calldata,
-          gas: "0x186A0", // 100000 gas limit — plenty for storeConsentHash
-        }]
+        params: [{ from: accounts[0], to: CONTRACT_ADDRESS, data: calldata, gas: "0x186A0" }]
       });
-
       console.log("[EncryptCMP] ✅ On-chain anchor tx:", txHash);
       return txHash;
     } catch (err) {
-      // User rejected or other error — not fatal, consent is still saved to Supabase
       if (err.code === 4001) {
         console.log("[EncryptCMP] User rejected MetaMask tx — consent saved to Supabase only");
       } else {
@@ -168,29 +144,24 @@
     }
   }
 
-  /**
-   * Anchor all granted purposes on-chain.
-   * Returns a map of { purpose: consentId } for purposes that were anchored.
-   */
   async function anchorAllPurposes(purposes, granted) {
     await ensureKeccak();
-    const anchored = {};
+    const anchored    = {};
     const purposeList = Object.keys(purposes).filter(p => purposes[p] === true);
-
     for (const purpose of purposeList) {
-      const hashHex = await hashConsent(deviceId, purpose);
+      const hashHex   = await hashConsent(deviceId, purpose);
       const consentId = "0x" + hashHex;
-      const txHash = await anchorOnChain(hashHex, granted);
+      const txHash    = await anchorOnChain(hashHex, granted);
       anchored[purpose] = { consentId, txHash };
       console.log(`[EncryptCMP] Purpose "${purpose}" → consentId: ${consentId}${txHash ? " tx: " + txHash : " (Supabase only)"}`);
     }
     return anchored;
   }
 
-  // ── TRANSLATIONS ─────────────────────────────────────────────────────────
+  // ── TRANSLATIONS ──────────────────────────────────────────────────────────
   const TR = {
     en:{
-      bannerTitle: "🔒 ENCRYPT CMP",
+      bannerTitle:"🔒 ENCRYPT CMP",
       bannerText:"We use cookies and similar technologies for essential functionality, analytics, marketing, personalization, and third‑party services.",
       btnReject:"I Disagree", btnCustomize:"Customize", btnAccept:"Accept All",
       modalTitle:"Privacy Preferences",
@@ -234,7 +205,7 @@
       poweredBy:"Powered by ENCRYPT CMP · CSIC 1.0",
     },
     hi:{
-      bannerTitle: "🔒 ENCRYPT CMP",
+      bannerTitle:"🔒 ENCRYPT CMP",
       bannerText:"हम आवश्यक कार्यक्षमता, विश्लेषण, मार्केटिंग, निजीकरण और तृतीय‑पक्ष सेवाओं के लिए कुकीज़ का उपयोग करते हैं।",
       btnReject:"मैं असहमत हूँ", btnCustomize:"कस्टमाइज़ करें", btnAccept:"सभी स्वीकार करें",
       modalTitle:"गोपनीयता प्राथमिकताएँ",
@@ -269,7 +240,7 @@
       poweredBy:"ENCRYPT CMP द्वारा संचालित · CSIC 1.0",
     },
     te:{
-      bannerTitle: "🔒 ENCRYPT CMP",
+      bannerTitle:"🔒 ENCRYPT CMP",
       bannerText:"మేము అవసరమైన కార్యాచరణ, విశ్లేషణలు, మార్కెటింగ్, వ్యక్తిగతీకరణ మరియు మూడవ పక్ష సేవల కోసం కుకీలు ఉపయోగిస్తాము.",
       btnReject:"నేను అంగీకరించను", btnCustomize:"అనుకూలీకరించు", btnAccept:"అన్నీ అంగీకరించు",
       modalTitle:"గోప్యతా ప్రాధాన్యతలు",
@@ -301,7 +272,7 @@
       poweredBy:"ENCRYPT CMP ద్వారా · CSIC 1.0",
     },
     ta:{
-      bannerTitle: "🔒 ENCRYPT CMP",
+      bannerTitle:"🔒 ENCRYPT CMP",
       bannerText:"அத்தியாவசிய செயல்பாடு, பகுப்பாய்வு, சந்தைப்படுத்தல், தனிப்பயனாக்கம் மற்றும் மூன்றாம் தரப்பு சேவைகளுக்காக குக்கீகளை பயன்படுத்துகிறோம்.",
       btnReject:"நான் ஒப்புக்கொள்ளவில்லை", btnCustomize:"தனிப்பயனாக்கு", btnAccept:"அனைத்தையும் ஏற்கவும்",
       modalTitle:"தனியுரிமை விருப்பத்தேர்வுகள்",
@@ -333,7 +304,7 @@
       poweredBy:"ENCRYPT CMP மூலம் · CSIC 1.0",
     },
     kn:{
-      bannerTitle: "🔒 ENCRYPT CMP",
+      bannerTitle:"🔒 ENCRYPT CMP",
       bannerText:"ಅಗತ್ಯ ಕಾರ್ಯಕ್ಷಮತೆ, ವಿಶ್ಲೇಷಣೆ, ಮಾರ್ಕೆಟಿಂಗ್, ವೈಯಕ್ತಿಕಗೊಳಿಸುವಿಕೆ ಮತ್ತು ಮೂರನೇ ಪಕ್ಷ ಸೇವೆಗಳಿಗಾಗಿ ಕುಕೀಗಳನ್ನು ಬಳಸುತ್ತೇವೆ.",
       btnReject:"ನಾನು ಒಪ್ಪುವುದಿಲ್ಲ", btnCustomize:"ಕಸ್ಟಮೈಸ್ ಮಾಡಿ", btnAccept:"ಎಲ್ಲವನ್ನೂ ಸ್ವೀಕರಿಸಿ",
       modalTitle:"ಗೌಪ್ಯತಾ ಆದ್ಯತೆಗಳು",
@@ -530,7 +501,6 @@
         </div>
         <div class="_ecmp_pw" id="_ecmp_pw"></div>
       </div>
-
       <div id="_ecmp_modal">
         <div class="_ecmp_mbox">
           <div class="_ecmp_lang_bar" id="_ecmp_mlang"></div>
@@ -578,7 +548,6 @@
           </div>
         </div>
       </div>
-
       <div id="_ecmp_vmodal">
         <div class="_ecmp_vmbox">
           <h3 id="_ecmp_vmtitle"></h3>
@@ -586,7 +555,6 @@
           <button class="_ecmp_rs" id="_ecmp_vmclose" style="margin-top:16px;max-width:120px;"></button>
         </div>
       </div>
-
       <div id="_ecmp_toast"></div>
       <button id="_ecmp_gear">⚙</button>
     `;
@@ -620,11 +588,11 @@
   function renderModal() {
     const tr = t();
     d.getElementById("_ecmp_mtitle").textContent = tr.modalTitle;
-    d.getElementById("_ecmp_sv").textContent = tr.btnSave;
-    d.getElementById("_ecmp_oo").textContent = tr.btnOptOutAll;
-    d.getElementById("_ecmp_rs").textContent = tr.btnRestore;
-    d.getElementById("_ecmp_vlink").textContent = tr.viewVendorsBtn;
-    d.getElementById("_ecmp_rlink").textContent = tr.viewRightsBtn;
+    d.getElementById("_ecmp_sv").textContent     = tr.btnSave;
+    d.getElementById("_ecmp_oo").textContent     = tr.btnOptOutAll;
+    d.getElementById("_ecmp_rs").textContent     = tr.btnRestore;
+    d.getElementById("_ecmp_vlink").textContent  = tr.viewVendorsBtn;
+    d.getElementById("_ecmp_rlink").textContent  = tr.viewRightsBtn;
     d.getElementById("_ecmp_durlbl").textContent = tr.consentDurationLabel;
     const sel = d.getElementById("_ecmp_dur");
     sel.options[0].textContent = tr.duration24h;
@@ -697,12 +665,10 @@
     if (ps.personalization)     { score += isGDPR?15:20; factors.push(tr.riskFactorPersonalization); }
     if (ps.third_party_sharing) { score += isGDPR?30:35; factors.push(tr.riskFactorThirdParty); }
     score = Math.min(100, Math.max(0, score));
-
     let lbl, color, rec;
     if (score>=70)      { lbl=tr.riskHigh;   color="#ef4444"; rec=ps.third_party_sharing?(isDPDP?tr.riskRecHighDPDPThird:tr.riskRecHighGDPRThird):tr.riskRecHighMarketing; }
     else if (score>=40) { lbl=tr.riskMedium; color="#f59e0b"; rec=tr.riskRecMedium; }
     else                { lbl=tr.riskLow;    color="#22c55e"; rec=isDPDP?tr.riskRecLowDPDP:tr.riskRecLowGDPR; }
-
     d.getElementById("_ecmp_risktitle").textContent = tr.riskTitle;
     d.getElementById("_ecmp_riskscore").textContent = score+"/100";
     d.getElementById("_ecmp_riskfill").style.width  = Math.max(20,score)+"%";
@@ -718,8 +684,8 @@
   // ── VENDOR MODAL ──────────────────────────────────────────────────────────
   async function loadVendors() {
     const tr = t();
-    d.getElementById("_ecmp_vmtitle").textContent  = tr.vendorModalTitle;
-    d.getElementById("_ecmp_vmclose").textContent  = tr.vendorClose;
+    d.getElementById("_ecmp_vmtitle").textContent = tr.vendorModalTitle;
+    d.getElementById("_ecmp_vmclose").textContent = tr.vendorClose;
     const vlist = d.getElementById("_ecmp_vlist");
     vlist.innerHTML = "<em>Loading…</em>";
     d.getElementById("_ecmp_vmodal").classList.add("_ecmp_show");
@@ -770,7 +736,7 @@
     });
   }
 
-  // ── PERSIST (Supabase + Blockchain) ──────────────────────────────────────
+  // ── PERSIST ───────────────────────────────────────────────────────────────
   async function persist(eventType) {
     const durVal = document.getElementById("_ecmp_dur")?.value || "30d";
     const exp = new Date();
@@ -781,50 +747,57 @@
     const rid = crypto.randomUUID();
     const now = new Date().toISOString();
 
-    // ── STEP 1: Anchor on-chain FIRST (before Supabase) so consent_id is ready
-    // Only anchor granted purposes; revoke events anchor with status=false
+    // ── FIX 1: Set lastReceipt IMMEDIATELY before any await
+    // Prevents race condition where showReceipt() fires before async ops finish
+    lastReceipt = {
+      receipt_id:    rid,
+      device_id:     deviceId,
+      purposes:      {...ps},
+      event_type:    eventType,
+      consent_model: model,
+      lang,
+      org:           CFG.org,
+      timestamp:     now,
+      expires_at:    exp.toISOString(),
+      consent_id:    null,
+      tx_hash:       null,
+      chain_anchors: {},
+    };
+    // ── FIX 2: Persist receipt to localStorage immediately
+    // Survives page refresh — no more "no receipt" after reload
+    safeStorage.set("_ecmp_receipt", JSON.stringify(lastReceipt));
+
+    // ── STEP 1: Anchor on-chain
     const isRevoke = eventType.includes("revoke") || eventType.includes("reject");
-    let chainAnchors = {}; // { purpose: { consentId, txHash } }
+    let chainAnchors = {};
 
     if (!isRevoke) {
-      // Accept / save — anchor all granted purposes
       try {
         chainAnchors = await anchorAllPurposes(ps, true);
       } catch (chainErr) {
         console.warn("[EncryptCMP] Chain anchor error (non-fatal):", chainErr.message);
       }
     } else {
-      // Revoke — anchor necessary purpose as false to signal revocation
       try {
         await ensureKeccak();
-        const hashHex = await hashConsent(deviceId, "necessary");
+        const hashHex   = await hashConsent(deviceId, "necessary");
         const consentId = "0x" + hashHex;
-        const txHash = await anchorOnChain(hashHex, false);
+        const txHash    = await anchorOnChain(hashHex, false);
         chainAnchors["necessary"] = { consentId, txHash };
       } catch (chainErr) {
         console.warn("[EncryptCMP] Revoke chain anchor error (non-fatal):", chainErr.message);
       }
     }
 
-    // Pick the first anchored consentId as the primary one for audit logs
-    const primaryAnchor = Object.values(chainAnchors)[0];
+    // ── FIX 3: Update lastReceipt with on-chain data and re-save
+    const primaryAnchor    = Object.values(chainAnchors)[0];
     const primaryConsentId = primaryAnchor?.consentId || null;
     const primaryTxHash    = primaryAnchor?.txHash    || null;
 
-    lastReceipt = {
-      receipt_id:   rid,
-      device_id:    deviceId,
-      purposes:     {...ps},
-      event_type:   eventType,
-      consent_model: model,
-      lang,
-      org:          CFG.org,
-      timestamp:    now,
-      expires_at:   exp.toISOString(),
-      consent_id:   primaryConsentId,   // on-chain hash
-      tx_hash:      primaryTxHash,      // Sepolia tx
-      chain_anchors: chainAnchors,      // all per-purpose anchors
-    };
+    lastReceipt.consent_id    = primaryConsentId;
+    lastReceipt.tx_hash       = primaryTxHash;
+    lastReceipt.chain_anchors = chainAnchors;
+    safeStorage.set("_ecmp_receipt", JSON.stringify(lastReceipt));
 
     // ── STEP 2: Save to Supabase
     if (!db) {
@@ -844,26 +817,24 @@
 
     try {
       const r2 = await db.from("consent_receipts").insert(
-        { id:rid, subject_id:deviceId, purposes:{...ps}, expires_at:exp.toISOString(), consent_model:model, org:CFG.org, policy_version: CFG.policyVersion || "1.0.0" }
+        { id:rid, subject_id:deviceId, purposes:{...ps}, expires_at:exp.toISOString(), consent_model:model, org:CFG.org, policy_version:CFG.policyVersion||"1.0.0" }
       );
       if (r2.error) console.error("[EncryptCMP] consent_receipts error:", JSON.stringify(r2.error));
       else console.log("[EncryptCMP] consent_receipts ✅");
     } catch(e) { console.error("[EncryptCMP] consent_receipts threw:", e.message); }
 
     try {
-      // Include consent_id and tx_hash in audit_logs.details so admin panel can show chain anchor
       const r3 = await db.from("audit_logs").insert(
-        { event_type:eventType, actor_id:deviceId, actor_role:"data_principal",
-          details:{...lastReceipt} }
+        { event_type:eventType, actor_id:deviceId, actor_role:"data_principal", details:{...lastReceipt} }
       );
       if (r3.error) console.error("[EncryptCMP] audit_logs error:", JSON.stringify(r3.error));
-      else console.log("[EncryptCMP] audit_logs ✅ consent_id:", primaryConsentId || "none (no MetaMask)");
+      else console.log("[EncryptCMP] audit_logs ✅ consent_id:", primaryConsentId||"none (no MetaMask)");
     } catch(e) { console.error("[EncryptCMP] audit_logs threw:", e.message); }
 
     return rid;
   }
 
-  // ── REGION ────────────────────────────────────────────────────────────────
+  // ── REGION DETECTION ──────────────────────────────────────────────────────
   async function detectRegion() {
     try {
       const controller = new AbortController();
@@ -879,78 +850,133 @@
     } catch {
       try {
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        model = tz === "Asia/Kolkata" ? "dpdp" :
-                (tz && tz.startsWith("Europe/")) ? "gdpr" : "dpdp";
+        model = tz === "Asia/Kolkata" ? "dpdp" : (tz && tz.startsWith("Europe/")) ? "gdpr" : "dpdp";
       } catch { model = "dpdp"; }
     }
   }
 
   // ── ACTIONS ───────────────────────────────────────────────────────────────
-  function save() { localStorage.setItem("_ecmp_ps",JSON.stringify(ps)); localStorage.setItem("_ecmp_ok","1"); }
+  // ── FIX 4: All localStorage calls replaced with safeStorage
+  function save() {
+    safeStorage.set("_ecmp_ps", JSON.stringify(ps));
+    safeStorage.set("_ecmp_ok", "1");
+  }
 
   async function acceptAll() {
-    ps={necessary:true,analytics:true,marketing:true,personalization:true,third_party_sharing:true};
+    ps = {necessary:true,analytics:true,marketing:true,personalization:true,third_party_sharing:true};
     save(); hideBanner(); showGear(); toast(t().toastSaved);
-    const rid=await persist("consent_accept_all"); dispatch("accept",{purposes:{...ps},receiptId:rid});
+    const rid = await persist("consent_accept_all");
+    dispatch("accept", {purposes:{...ps}, receiptId:rid});
   }
+
   async function rejectAll() {
-    ps={necessary:true,analytics:false,marketing:false,personalization:false,third_party_sharing:false};
+    ps = {necessary:true,analytics:false,marketing:false,personalization:false,third_party_sharing:false};
     save(); hideBanner(); showGear(); toast(t().toastSaved);
-    const rid=await persist("consent_reject_all"); dispatch("reject",{purposes:{...ps},receiptId:rid});
+    const rid = await persist("consent_reject_all");
+    dispatch("reject", {purposes:{...ps}, receiptId:rid});
   }
+
   async function savePrefs() {
     save(); hideModal(); hideBanner(); showGear(); toast(t().toastSaved);
-    const rid=await persist("consent_save_prefs"); dispatch("save",{purposes:{...ps},receiptId:rid});
+    const rid = await persist("consent_save_prefs");
+    dispatch("save", {purposes:{...ps}, receiptId:rid});
   }
+
   function optOutAll() {
-    ["analytics","marketing","personalization","third_party_sharing"].forEach(id=>{
-      ps[id]=false; const el=d.getElementById(`_ecmp_${id}`); if(el)el.checked=false;
-    }); updateRisk();
+    ["analytics","marketing","personalization","third_party_sharing"].forEach(id => {
+      ps[id] = false;
+      const el = d.getElementById(`_ecmp_${id}`);
+      if (el) el.checked = false;
+    });
+    updateRisk();
   }
+
   function restoreDefaults() {
-    const def={necessary:true,analytics:true,marketing:false,personalization:true,third_party_sharing:false};
-    Object.assign(ps,def);
-    Object.keys(def).forEach(id=>{ const el=d.getElementById(`_ecmp_${id}`); if(el&&!el.disabled)el.checked=ps[id]; });
+    const def = {necessary:true,analytics:true,marketing:false,personalization:true,third_party_sharing:false};
+    Object.assign(ps, def);
+    Object.keys(def).forEach(id => {
+      const el = d.getElementById(`_ecmp_${id}`);
+      if (el && !el.disabled) el.checked = ps[id];
+    });
     updateRisk();
   }
 
   // ── UI HELPERS ────────────────────────────────────────────────────────────
-  const $=id=>d.getElementById(id);
-  const showBanner=()=>{ renderBanner(); $("_ecmp_banner").classList.add("_ecmp_show"); };
-  const hideBanner=()=>  $("_ecmp_banner").classList.remove("_ecmp_show");
-  const showModal =()=>{ renderModal(); $("_ecmp_modal").classList.add("_ecmp_show"); };
-  const hideModal =()=>  $("_ecmp_modal").classList.remove("_ecmp_show");
-  const showGear  =()=>  $("_ecmp_gear").classList.add("_ecmp_show");
-  function toast(msg){ const el=$("_ecmp_toast"); el.textContent=msg; el.style.display="block"; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display="none",2800); }
-  function dispatch(ev,det){ w.dispatchEvent(new CustomEvent(`encrypt-cmp:${ev}`,{detail:det})); }
+  const $ = id => d.getElementById(id);
+  const showBanner = () => { renderBanner(); $("_ecmp_banner").classList.add("_ecmp_show"); };
+  const hideBanner = () =>   $("_ecmp_banner").classList.remove("_ecmp_show");
+  const showModal  = () => { renderModal();  $("_ecmp_modal").classList.add("_ecmp_show"); };
+  const hideModal  = () =>   $("_ecmp_modal").classList.remove("_ecmp_show");
+  const showGear   = () =>   $("_ecmp_gear").classList.add("_ecmp_show");
 
-  // ── BIND ──────────────────────────────────────────────────────────────────
+  function toast(msg) {
+    const el = $("_ecmp_toast");
+    el.textContent = msg;
+    el.style.display = "block";
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.style.display = "none", 2800);
+  }
+
+  function dispatch(ev, det) {
+    w.dispatchEvent(new CustomEvent(`encrypt-cmp:${ev}`, {detail:det}));
+  }
+
+  // ── BIND EVENTS ───────────────────────────────────────────────────────────
   function bindEvents() {
     $("_ecmp_ba").onclick = acceptAll;
     $("_ecmp_br").onclick = rejectAll;
-    $("_ecmp_bc").onclick = ()=>{ hideBanner(); showModal(); };
+    $("_ecmp_bc").onclick = () => { hideBanner(); showModal(); };
     $("_ecmp_sv").onclick = savePrefs;
     $("_ecmp_oo").onclick = optOutAll;
     $("_ecmp_rs").onclick = restoreDefaults;
-    $("_ecmp_gear").onclick = ()=>showModal();
-    $("_ecmp_modal").onclick = e=>{ if(e.target.id==="_ecmp_modal") hideModal(); };
-    $("_ecmp_vmodal").onclick = e=>{ if(e.target.id==="_ecmp_vmodal") $("_ecmp_vmodal").classList.remove("_ecmp_show"); };
-    $("_ecmp_vlink").onclick = loadVendors;
-    $("_ecmp_vmclose").onclick = ()=>$("_ecmp_vmodal").classList.remove("_ecmp_show");
-    $("_ecmp_rlink").onclick = ()=>{ const r=$("_ecmp_rights"); r.style.display=r.style.display==="block"?"none":"block"; renderRights(); };
-    $("_ecmp_rclose").onclick = ()=>$("_ecmp_rights").style.display="none";
+    $("_ecmp_gear").onclick = () => showModal();
+    $("_ecmp_modal").onclick  = e => { if(e.target.id==="_ecmp_modal")  hideModal(); };
+    $("_ecmp_vmodal").onclick = e => { if(e.target.id==="_ecmp_vmodal") $("_ecmp_vmodal").classList.remove("_ecmp_show"); };
+    $("_ecmp_vlink").onclick  = loadVendors;
+    $("_ecmp_vmclose").onclick = () => $("_ecmp_vmodal").classList.remove("_ecmp_show");
+    $("_ecmp_rlink").onclick  = () => {
+      const r = $("_ecmp_rights");
+      r.style.display = r.style.display === "block" ? "none" : "block";
+      renderRights();
+    };
+    $("_ecmp_rclose").onclick = () => $("_ecmp_rights").style.display = "none";
   }
 
   // ── PUBLIC API ────────────────────────────────────────────────────────────
   w.EncryptCMP = {
-    getConsent:    ()=>({...ps}),
+    getConsent:     () => ({...ps}),
     showBanner,
-    getReceipt:    ()=>lastReceipt,
-    setLang:       l=>{ if(TR[l]){lang=l; renderBanner(); if($("_ecmp_modal").classList.contains("_ecmp_show"))renderModal();} },
-    isConsentGiven:()=>!!localStorage.getItem("_ecmp_ok"),
-    revokeConsent: purpose=>{ if(purpose in ps&&purpose!=="necessary"){ps[purpose]=false; localStorage.setItem("_ecmp_ps",JSON.stringify(ps)); persist("consent_revoke_purpose"); dispatch("revoke",{purpose,purposes:{...ps}}); toast("Revoked: "+purpose);} },
-    revokeAll:     ()=>{ ps={necessary:true,analytics:false,marketing:false,personalization:false,third_party_sharing:false}; localStorage.setItem("_ecmp_ps",JSON.stringify(ps)); localStorage.removeItem("_ecmp_ok"); persist("consent_revoke_all"); dispatch("revoke",{purpose:"all",purposes:{...ps}}); toast("All consents revoked"); },
+    getReceipt:     () => lastReceipt,
+    setLang:        l  => {
+      if (TR[l]) {
+        lang = l;
+        renderBanner();
+        if ($("_ecmp_modal").classList.contains("_ecmp_show")) renderModal();
+      }
+    },
+    isConsentGiven: () => !!safeStorage.get("_ecmp_ok"),
+    revokeConsent:  purpose => {
+      if (purpose in ps && purpose !== "necessary") {
+        ps[purpose] = false;
+        safeStorage.set("_ecmp_ps", JSON.stringify(ps));
+        persist("consent_revoke_purpose");
+        dispatch("revoke", {purpose, purposes:{...ps}});
+        toast("Revoked: " + purpose);
+      }
+    },
+    // ── FIX 5: revokeAll clears receipt from localStorage too
+    revokeAll: () => {
+      ps = {necessary:true,analytics:false,marketing:false,personalization:false,third_party_sharing:false};
+      safeStorage.set("_ecmp_ps", JSON.stringify(ps));
+      safeStorage.remove("_ecmp_ok");
+      safeStorage.remove("_ecmp_receipt");
+      lastReceipt = null;
+      persist("consent_revoke_all");
+      dispatch("revoke", {purpose:"all", purposes:{...ps}});
+      toast("All consents revoked");
+    },
   };
+
   w._ecmpLang = l => w.EncryptCMP.setLang(l);
 
   // ── INIT ──────────────────────────────────────────────────────────────────
@@ -962,11 +988,14 @@
     catch(e) { console.warn("[EncryptCMP] DB init failed:", e.message); }
     await detectRegion();
     renderBanner();
-    if (!localStorage.getItem("_ecmp_ok")) showBanner();
+    // ── FIX 6: Use safeStorage for the consent gate check
+    if (!safeStorage.get("_ecmp_ok")) showBanner();
     else showGear();
-    dispatch("ready",{deviceId,model,lang});
+    dispatch("ready", {deviceId, model, lang});
   }
 
-  d.readyState==="loading" ? d.addEventListener("DOMContentLoaded",init) : init();
+  d.readyState === "loading"
+    ? d.addEventListener("DOMContentLoaded", init)
+    : init();
 
 }(window, document));
