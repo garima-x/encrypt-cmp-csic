@@ -35,18 +35,45 @@
 * [License](#license)
 * [Disclaimer](#disclaimer)
 
-🏆 Recognition
+---
 
-Winner — Women in Technology Award | Cyber Security Innovation Challenge (CSIC) 1.0
+## 🏆 Recognition
 
-Team Encrypt was awarded the Women in Technology Award, valued at ₹3,00,000, at the Cyber Security Innovation Challenge (CSIC) 1.0, organized jointly by the Data Security Council of India (DSCI) and the Ministry of Electronics and Information Technology (MeitY).
+> ### 🥇 Women in Technology Award — CSIC 1.0
+> **₹3,00,000 Award · Team Encrypt**
 
-The award recognizes the team's innovation, impact, and contribution to the cybersecurity domain.
+---
 
+### 📌 Achievement
 
-CSIC 1.0 brought together 30,000+ innovators and 970+ teams through a five-month, five-stage competition, with 20 teams selected as finalists for the Grand Finale held in New Delhi on 17 April 2026.
+**Winner — Women in Technology Award**
 
-Encrypt was developed under Cluster 9 — Governance, Operations & Privacy, focusing on an execution-grade, blockchain-anchored consent management platform for secure digital ecosystems.
+Organized jointly by **Data Security Council of India (DSCI)** and **Ministry of Electronics and Information Technology (MeitY)**.
+
+---
+
+### 👥 Team
+
+- **Garima Sharma** — Team Lead
+- **Dixha Bharti**
+- **Ishani Sharma**
+
+---
+
+### 🚀 Project
+
+**Blockchain-Anchored Consent Management Platform**
+
+**Cluster 9 — Governance, Operations & Privacy**
+
+---
+
+### 🏅 CSIC 1.0
+
+**30,000+ Innovators · 970+ Teams · 20 Finalists**
+
+📍 **New Delhi** · **17 April 2026**
+
 ---
 
 ## Overview
