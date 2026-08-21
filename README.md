@@ -12,6 +12,7 @@
 
 ## Table of Contents
 
+* [Recognition](#recognition)
 * [Overview](#overview)
 * [Problem Statement](#problem-statement)
 * [Why ENCRYPT CMP](#why-encrypt-cmp)
@@ -34,6 +35,18 @@
 * [License](#license)
 * [Disclaimer](#disclaimer)
 
+🏆 Recognition
+
+Winner — Women in Technology Award | Cyber Security Innovation Challenge (CSIC) 1.0
+
+Team Encrypt was awarded the Women in Technology Award, valued at ₹3,00,000, at the Cyber Security Innovation Challenge (CSIC) 1.0, organized jointly by the Data Security Council of India (DSCI) and the Ministry of Electronics and Information Technology (MeitY).
+
+The award recognizes the team's innovation, impact, and contribution to the cybersecurity domain.
+
+
+CSIC 1.0 brought together 30,000+ innovators and 970+ teams through a five-month, five-stage competition, with 20 teams selected as finalists for the Grand Finale held in New Delhi on 17 April 2026.
+
+Encrypt was developed under Cluster 9 — Governance, Operations & Privacy, focusing on an execution-grade, blockchain-anchored consent management platform for secure digital ecosystems.
 ---
 
 ## Overview
