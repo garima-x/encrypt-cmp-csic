@@ -52,11 +52,6 @@ Organized jointly by **Data Security Council of India (DSCI)** and **Ministry of
 
 ---
 
-### 👥 Team
-
-- **Garima Sharma** — Team Lead
-- **Dixha Bharti**
-- **Ishani Sharma**
 
 ---
 
