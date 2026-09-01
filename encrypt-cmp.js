@@ -36,8 +36,8 @@
   const CFG = {
     org:           script?.getAttribute("data-org")          || "ENCRYPT CMP",
     lang:          script?.getAttribute("data-lang")         || "en",
-    sbUrl:         script?.getAttribute("data-supabase-url") || "https://lykbbpgctjmjkkdrnshu.supabase.co",
-    sbKey:         script?.getAttribute("data-supabase-key") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5a2JicGdjdGptamtrZHJuc2h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0NjcyNzIsImV4cCI6MjA4MTA0MzI3Mn0.U7UpV-PAyuJYzHivzmwcflT0Aj0U2ypihM4sdhNfbdw",
+    sbUrl:         script?.getAttribute("data-supabase-url") || "https://kltrmnyyhxbiymrlgvor.supabase.co",
+    sbKey:         script?.getAttribute("data-supabase-key") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsdHJtbnl5aHhiaXltcmxndm9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNTU1MzQsImV4cCI6MjEwMzgzMTUzNH0.zrkDy3cO-w8vhRQp7QnR5NELKyAf_arSWCzLwtTZxxo",
     policyVersion: script?.getAttribute("data-policy-version") || "1.0.0",
   };
 
